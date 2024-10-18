@@ -21,18 +21,19 @@
 #define STEP ((double)RATIO_X / WIDTH)
 
 #define DEGREE 2        // Degree of the polynomial
+// Maximum 65535 due to datatype uint16_t
 #define ITERATIONS 1000 // Maximum number of iterations
 
 using namespace std;
 
 int main(int argc, char **argv)
 {
-    int *const image = new int[HEIGHT * WIDTH];
+    uint16_t *const image = new uint16_t[HEIGHT * WIDTH];
 
     const auto start = chrono::steady_clock::now();
-    for (int pos = 0; pos < HEIGHT * WIDTH; pos++)
+    #pragma omp parallel for schedule(dynamic, 1)
+    for (int pos = 0; pos < HEIGHT * WIDTH; ++pos)
     {
-        image[pos] = 0;
 
         const int row = pos / WIDTH;
         const int col = pos % WIDTH;
@@ -40,7 +41,7 @@ int main(int argc, char **argv)
 
         // z = z^2 + c
         complex<double> z(0, 0);
-        for (int i = 1; i <= ITERATIONS; i++)
+        for (int i = 1; i <= ITERATIONS; ++i)
         {
             z = pow(z, 2) + c;
 
@@ -54,8 +55,8 @@ int main(int argc, char **argv)
     }
     const auto end = chrono::steady_clock::now();
     cout << "Time elapsed: "
-         << chrono::duration_cast<chrono::seconds>(end - start).count()
-         << " seconds." << endl;
+         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
+         << " milliseconds." << endl;
 
     // Write the result to a file
     ofstream matrix_out;
