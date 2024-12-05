@@ -29,7 +29,7 @@ int64_t mandelbrot_computation(ofstream &matrix_out) {
     }
     const auto end = chrono::steady_clock::now();
     auto difference =chrono::duration_cast<chrono::milliseconds>(end - start).count();
-    cout << "Time elapsed: "
+    cerr << "Time elapsed: "
          << difference
          << " milliseconds." << endl;
     for (int row = 0; row < HEIGHT; row++)
