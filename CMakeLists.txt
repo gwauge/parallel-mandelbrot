@@ -25,7 +25,7 @@ list(APPEND BASE_OPTIONS
 # list(APPEND UNOPTIMIZED "-O0")
 # list(APPEND OPTIMIZED "-O3")
 list(APPEND HOST "-O3" "-xHost")
-list(APPEND OPTIONS "UNOPTIMIZED" "OPTIMIZED" "HOST")
+list(APPEND OPTIONS "HOST")
 
 # Add the executables
 file(GLOB SRC_FILES src/*.cpp)
