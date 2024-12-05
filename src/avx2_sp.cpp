@@ -1,6 +1,8 @@
 #include <immintrin.h>
 #include "mandelbrot.hpp"
 
+#ifdef AVX2_SP
+
 int64_t mandelbrot_computation(ofstream &matrix_out)
 {
     uint16_t *const image = new uint16_t[HEIGHT * WIDTH];
@@ -95,3 +97,4 @@ int64_t mandelbrot_computation(ofstream &matrix_out)
     delete[] image; // It's here for coding style, but useless
     return difference;
 }
+#endif
