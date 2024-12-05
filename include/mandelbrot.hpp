@@ -20,9 +20,9 @@
 
 #define STEP ((double)RATIO_X / WIDTH)
 
-#define DEGREE 2        // Degree of the polynomial
+#define DEGREE 2 // Degree of the polynomial
 // Maximum 65535 due to datatype uint16_t
-#define ITERATIONS 10000 // Maximum number of iterations
+#define ITERATIONS 1000 // Maximum number of iterations
 
 using namespace std;
 
