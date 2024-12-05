@@ -1,7 +1,6 @@
-project(parallel-mandelbrot)
-
 # CMake version
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR) # at least 3.18 required for icpx
+project(parallel-mandelbrot)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_COMPILER icpx) # use Intel C++ compiler
@@ -22,8 +21,9 @@ list(APPEND BASE_OPTIONS
     "-g"
     )
 
-list(APPEND UNOPTIMIZED "-O0")
-list(APPEND OPTIMIZED "-O3")
+# TODO: Fix builds without avx2
+# list(APPEND UNOPTIMIZED "-O0")
+# list(APPEND OPTIMIZED "-O3")
 list(APPEND HOST "-O3" "-xHost")
 list(APPEND OPTIONS "UNOPTIMIZED" "OPTIMIZED" "HOST")
 
