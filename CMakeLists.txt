@@ -6,6 +6,9 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR) # at least 3.20 required for ic
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_COMPILER icpx) # use Intel C++ compiler
 
+# specify binary output directory
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 include_directories(include)
 
 add_compile_options(
