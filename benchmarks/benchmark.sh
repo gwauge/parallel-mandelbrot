@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 # ===== HPC mandelbrot benchmark =====
 
 # Check if script is run from within benchmarks directory
@@ -7,7 +8,7 @@ if [ ! -f "benchmark.sh" ]; then
     exit 1
 fi
 
-cd ..
+cd .. || exit
 
 # === Build project ===
 echo "Building mandelbrot benchmark"
@@ -19,25 +20,22 @@ if [ ! -d "build" ]; then
 fi
 
 # Change to build directory
-cd build
+cd build || exit
 
 # Run cmake
 cmake ..
 
 # Compile files
-make
-
-echo "WARNING: Removing baseline for debugging purposes"
-rm bin/baseline
+make -j
 
 # Change back to root directory
-cd ..
+cd .. || exit
 
 
 # === Run benchmarks ===
 echo "Running benchmarks"
 
-cd benchmarks
+cd benchmarks || exit
 
 BENCHMARK_FILE="benchmark.csv"
 
@@ -56,6 +54,8 @@ if [ -f $BENCHMARK_FILE ]; then
         echo "Keeping old $BENCHMARK_FILE and aborting"
         exit 0
     fi
+else
+    echo "file,threads,time" >> $BENCHMARK_FILE
 fi
 
 # run each file in bin directory N times for warmup and M times for measurement
@@ -74,12 +74,12 @@ for file in ../build/bin/*; do
     # for THREADS in 1 2 4 8 16; do
     for THREADS in 4 8 16; do
         echo -e "\t\tThread count: $THREADS"
-        for i in $(seq 1 $N); do
+        for _ in $(seq 1 $N); do
             OMP_NUM_THREADS=$THREADS $file result > /dev/null
         done
 
         echo -e "\t\t\tFinished warmup"
-        for i in $(seq 1 $M); do
+        for _ in $(seq 1 $M); do
             # save output to variable, redirect stderr to /dev/null
             output=$(OMP_NUM_THREADS=$THREADS $file result 2>/dev/null)
             # append output to csv
