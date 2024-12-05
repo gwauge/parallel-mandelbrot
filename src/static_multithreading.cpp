@@ -1,37 +1,11 @@
-#include <iostream>
-#include <fstream>
-#include <complex>
-#include <chrono>
+#include "mandelbrot.hpp"
 
-// Ranges of the set
-#define MIN_X -2
-#define MAX_X 1
-#define MIN_Y -1
-#define MAX_Y 1
-
-// Image ratio
-#define RATIO_X (MAX_X - MIN_X)
-#define RATIO_Y (MAX_Y - MIN_Y)
-
-// Image size
-#define RESOLUTION 1000
-#define WIDTH (RATIO_X * RESOLUTION)
-#define HEIGHT (RATIO_Y * RESOLUTION)
-
-#define STEP ((double)RATIO_X / WIDTH)
-
-#define DEGREE 2        // Degree of the polynomial
-// Maximum 65535 due to datatype uint16_t
-#define ITERATIONS 1000 // Maximum number of iterations
-
-using namespace std;
-
-int main(int argc, char **argv)
-{
+#ifdef STATIC_MULTITHREADING
+int64_t mandelbrot_computation(ofstream &matrix_out) {
     uint16_t *const image = new uint16_t[HEIGHT * WIDTH];
 
     const auto start = chrono::steady_clock::now();
-    #pragma omp parallel for schedule(dynamic, 1)
+    #pragma omp parallel for
     for (int pos = 0; pos < HEIGHT * WIDTH; ++pos)
     {
 
@@ -54,26 +28,10 @@ int main(int argc, char **argv)
         }
     }
     const auto end = chrono::steady_clock::now();
+    auto difference =chrono::duration_cast<chrono::milliseconds>(end - start).count();
     cout << "Time elapsed: "
-         << chrono::duration_cast<chrono::milliseconds>(end - start).count()
+         << difference
          << " milliseconds." << endl;
-
-    // Write the result to a file
-    ofstream matrix_out;
-
-    if (argc < 2)
-    {
-        cout << "Please specify the output file as a parameter." << endl;
-        return -1;
-    }
-
-    matrix_out.open(argv[1], ios::trunc);
-    if (!matrix_out.is_open())
-    {
-        cout << "Unable to open file." << endl;
-        return -2;
-    }
-
     for (int row = 0; row < HEIGHT; row++)
     {
         for (int col = 0; col < WIDTH; col++)
@@ -89,5 +47,6 @@ int main(int argc, char **argv)
     matrix_out.close();
 
     delete[] image; // It's here for coding style, but useless
-    return 0;
+    return difference;
 }
+#endif
