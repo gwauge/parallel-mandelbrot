@@ -12,21 +12,7 @@ cd .. || exit
 
 # === Build project ===
 echo "Building mandelbrot benchmark"
-
-source /opt/intel/oneapi/setvars.sh
-
-if [ ! -d "build" ]; then
-    mkdir build
-fi
-
-# Change to build directory
-cd build || exit
-
-# Run cmake
-cmake ..
-
-# Compile files
-make -j
+bash build.sh # run build script
 
 # Change back to root directory
 cd .. || exit
