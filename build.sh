@@ -3,7 +3,10 @@ set -e
 
 # Script to build the project
 
-source /opt/intel/oneapi/setvars.sh
+# check if inside CI environment
+if [ ! -n "$CI" ]; then
+    source /opt/intel/oneapi/setvars.sh
+fi
 
 # Check if script is run from root directory
 if [ ! -f "main.cpp" ]; then

@@ -1,0 +1,29 @@
+name: Build project
+
+on:
+    push:
+        paths:
+            - "**.cpp"
+            - "**.hpp"
+            - "CMakeLists.txt"
+            - ".github/workflows/**/*"
+            - "build.sh"
+
+jobs:
+    linux:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            # Set up the Intel oneAPI Docker container
+            - name: Set up Intel oneAPI container
+              uses: addnab/docker-run-action@v3
+              with:
+                  image: intel/oneapi-hpckit:latest
+                  shell: bash
+                  options: -v ${{ github.workspace }}:/workspace -e CI=1 --rm # Remove the container after execution
+                  # Inside the container, run build commands
+                  run: |
+                      cd /workspace
+                      bash build.sh
