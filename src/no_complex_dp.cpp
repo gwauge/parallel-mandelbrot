@@ -1,29 +1,37 @@
 #include "mandelbrot.hpp"
 
-#ifdef DYNAMIC_MULTITHREADING
+#ifdef NO_COMPLEX_DP
 int64_t mandelbrot_computation(ofstream &matrix_out)
 {
     uint16_t *const image = new uint16_t[HEIGHT * WIDTH];
 
     const auto start = chrono::steady_clock::now();
-#pragma omp parallel for schedule(dynamic, 1)
+    #pragma omp parallel for schedule(dynamic, 1)
     for (int pos = 0; pos < HEIGHT * WIDTH; ++pos)
     {
 
         const int row = pos / WIDTH;
         const int col = pos % WIDTH;
-        const complex<double> c(col * STEP + MIN_X, row * STEP + MIN_Y);
+        const double cr = col * STEP + MIN_X;
+        const double ci = row * STEP + MIN_Y;
+
 
         // z = z^2 + c
-        complex<double> z(0, 0);
-        for (int i = 1; i <= ITERATIONS; ++i)
-        {
-            z = pow(z, 2) + c;
+        double zr = 0;
+        double zi = 0;
 
-            // If it is convergent
-            if (abs(z) >= 2)
-            {
-                image[pos] = i;
+        for (uint16_t k = 1; k <= ITERATIONS; ++k) {
+            double zr2 = zr*zr;
+            double zi2 = zi*zi;
+            double zrzi = zr * zi;
+
+            zr = (zr2 - zi2) + cr;
+            zi = (zrzi + zrzi) + ci;
+            zr2 = zr*zr;
+            zi2 = zi*zi;
+            double mag2 = zr2 + zi2;
+            image[pos] = k;
+            if(mag2 >= 4.0) {
                 break;
             }
         }

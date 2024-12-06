@@ -1,10 +1,11 @@
 #include "mandelbrot.hpp"
 
-#ifdef BASELINE
+#ifdef STATIC_MULTITHREADING_DP
 int64_t mandelbrot_computation(ofstream &matrix_out) {
     uint16_t *const image = new uint16_t[HEIGHT * WIDTH];
 
     const auto start = chrono::steady_clock::now();
+    #pragma omp parallel for
     for (int pos = 0; pos < HEIGHT * WIDTH; ++pos)
     {
 
@@ -18,10 +19,10 @@ int64_t mandelbrot_computation(ofstream &matrix_out) {
         {
             z = pow(z, 2) + c;
 
+            image[pos] = i;
             // If it is convergent
             if (abs(z) >= 2)
             {
-                image[pos] = i;
                 break;
             }
         }

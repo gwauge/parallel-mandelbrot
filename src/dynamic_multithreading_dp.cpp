@@ -1,11 +1,12 @@
 #include "mandelbrot.hpp"
 
-#ifdef STATIC_MULTITHREADING
-int64_t mandelbrot_computation(ofstream &matrix_out) {
+#ifdef DYNAMIC_MULTITHREADING_DP
+int64_t mandelbrot_computation(ofstream &matrix_out)
+{
     uint16_t *const image = new uint16_t[HEIGHT * WIDTH];
 
     const auto start = chrono::steady_clock::now();
-    #pragma omp parallel for
+#pragma omp parallel for schedule(dynamic, 1)
     for (int pos = 0; pos < HEIGHT * WIDTH; ++pos)
     {
 
@@ -20,15 +21,15 @@ int64_t mandelbrot_computation(ofstream &matrix_out) {
             z = pow(z, 2) + c;
 
             // If it is convergent
+            image[pos] = i;
             if (abs(z) >= 2)
             {
-                image[pos] = i;
                 break;
             }
         }
     }
     const auto end = chrono::steady_clock::now();
-    auto difference =chrono::duration_cast<chrono::milliseconds>(end - start).count();
+    auto difference = chrono::duration_cast<chrono::milliseconds>(end - start).count();
     cerr << "Time elapsed: "
          << difference
          << " milliseconds." << endl;
