@@ -21,11 +21,76 @@ list(APPEND BASE_OPTIONS
     "-g"
     )
 
-# TODO: Fix builds without avx2
-# list(APPEND UNOPTIMIZED "-O0")
-# list(APPEND OPTIMIZED "-O3")
-list(APPEND HOST "-O3" "-xHost")
-list(APPEND OPTIONS "HOST")
+list(APPEND O2 
+    "-O2" 
+    "-march=core-avx2" 
+)
+list(APPEND O2_STRICT 
+    "-O2" 
+    "-fp-model=strict"
+    "-march=core-avx2" 
+)
+list(APPEND O2_PRECISE
+    "-O2" 
+    "-fp-model=precise"
+    "-march=core-avx2" 
+)
+list(APPEND O3 
+    "-O3" 
+    "-march=core-avx2" 
+)
+list(APPEND O3_STRICT 
+    "-O3" 
+    "-fp-model=strict"
+    "-march=core-avx2" 
+)
+list(APPEND O3_PRECISE
+    "-O3" 
+    "-fp-model=precise"
+    "-march=core-avx2" 
+)
+list(APPEND O1 
+    "-O1" 
+    "-march=core-avx2" 
+)
+list(APPEND O1_STRICT 
+    "-O1" 
+    "-fp-model=strict"
+    "-march=core-avx2" 
+)
+list(APPEND O1_PRECISE
+    "-O1" 
+    "-fp-model=precise"
+    "-march=core-avx2" 
+)
+list(APPEND O0 
+    "-O0" 
+    "-march=core-avx2" 
+)
+list(APPEND O0_STRICT 
+    "-O0" 
+    "-fp-model=strict"
+    "-march=core-avx2" 
+)
+list(APPEND O0_PRECISE
+    "-O0" 
+    "-fp-model=precise"
+    "-march=core-avx2" 
+)
+list(APPEND OPTIONS 
+    "O2"
+    "O2_STRICT"
+    "O2_PRECISE"
+    "O3"
+    "O3_STRICT"
+    "O3_PRECISE"
+    "O1"
+    "O1_STRICT"
+    "O1_PRECISE"
+    "O0"
+    "O0_STRICT"
+    "O0_PRECISE"
+)
 
 # Add the executables
 file(GLOB SRC_FILES src/*.cpp)
