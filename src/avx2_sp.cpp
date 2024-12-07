@@ -11,7 +11,7 @@ int64_t mandelbrot_computation(ofstream &matrix_out)
 
     __m256 xmin = _mm256_set1_ps(MIN_X);
     __m256 ymin = _mm256_set1_ps(MIN_Y);
-    __m256 step = _mm256_set1_ps(STEP);
+    __m256 step = _mm256_set1_ps((float)STEP);
 
     // 2**2 (We calculate the squared magnitude to eliminate the square root operation)
     __m256 threshold = _mm256_set1_ps(4);
@@ -24,8 +24,8 @@ int64_t mandelbrot_computation(ofstream &matrix_out)
             const int row = pos / WIDTH;
             const int col = pos % WIDTH;
 
-            __m256 mcol = _mm256_add_ps(_mm256_set1_ps(col), col_increment);
-            __m256 mrow = _mm256_set1_ps(row);
+            __m256 mcol = _mm256_add_ps(_mm256_set1_ps((float)col), col_increment);
+            __m256 mrow = _mm256_set1_ps((float)row);
 
             __m256 cr = _mm256_add_ps(_mm256_mul_ps(mcol, step), xmin);
             __m256 ci = _mm256_add_ps(_mm256_mul_ps(mrow, step), ymin);

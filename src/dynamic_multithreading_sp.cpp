@@ -12,7 +12,7 @@ int64_t mandelbrot_computation(ofstream &matrix_out)
 
         const int row = pos / WIDTH;
         const int col = pos % WIDTH;
-        const complex<float> c(col * STEP + MIN_X, row * STEP + MIN_Y);
+        const complex<float> c((float)(col * STEP + MIN_X), (float)(row * STEP + MIN_Y));
 
         // z = z^2 + c
         complex<float> z(0, 0);
