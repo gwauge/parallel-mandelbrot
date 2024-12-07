@@ -16,7 +16,7 @@ int64_t mandelbrot_computation(ofstream &matrix_out)
 
         // z = z^2 + c
         complex<double> z(0, 0);
-        for (int i = 1; i <= ITERATIONS; ++i)
+        for (uint16_t i = 1; i <= ITERATIONS; ++i)
         {
             z = pow(z, 2) + c;
 
