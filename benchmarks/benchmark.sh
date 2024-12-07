@@ -13,7 +13,13 @@ cd .. || exit
 
 # === Build project ===
 echo "Building mandelbrot benchmark"
-bash build.sh # run build script
+
+# check if --skip-build flag is set
+if [ "$1" == "--skip-build" ]; then
+    echo "Skipping build"
+else
+    bash build.sh # run build script
+fi
 
 # === Run benchmarks ===
 echo "Running benchmarks"
@@ -77,7 +83,7 @@ echo "Benchmark finished"
 # === Generate plots ===
 echo "Generating plots"
 
-source .venv/bin/activate
+source ../.venv/bin/activate
 python generate_plots.py --filename $BENCHMARK_FILE
 
 echo "Plots generated"
