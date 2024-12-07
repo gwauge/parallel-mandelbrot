@@ -8,15 +8,12 @@ if [ ! -f "benchmark.sh" ]; then
     exit 1
 fi
 
+# change to root directory
 cd .. || exit
 
 # === Build project ===
 echo "Building mandelbrot benchmark"
 bash build.sh # run build script
-
-# Change back to root directory
-cd .. || exit
-
 
 # === Run benchmarks ===
 echo "Running benchmarks"

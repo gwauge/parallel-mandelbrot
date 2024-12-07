@@ -28,4 +28,4 @@ cd build || exit
 cmake ..
 
 # Compile files
-make -j
+make -j8
