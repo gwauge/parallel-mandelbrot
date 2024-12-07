@@ -14,7 +14,7 @@ def read_metrics(filename):
 
 def scatter_algos(data, output_file):
     # Create a figure for subplots
-    fig, axs = plt.subplots(1, len(data["algo"].unique()), figsize=(15, 15))
+    fig, axs = plt.subplots(1, len(data["algo"].unique()), figsize=(15*len(data["algo"].unique()), 15))
     fig.tight_layout(pad=2.0)
 
     # Plotting each category and type combination in its respective subplot
@@ -26,11 +26,12 @@ def scatter_algos(data, output_file):
             filtered_data = data[(data["options"] == type_) & (data["algo"] == category)]
 
             # Plot the scatter plot for this category and type
-            ax.scatter(filtered_data['threads'], filtered_data['time'], label=f'{type_[1:]}')
+            ax.scatter(filtered_data['threads'], filtered_data['time'], label=f'{type_}')
 
             # Set labels and title
             ax.set_xlabel('Threads')
             ax.set_ylabel('Time')
+            ax.set_xscale("log", base=2)
             ax.set_title(f'{category.capitalize()}')
             ax.grid(True)
             ax.legend()
@@ -40,7 +41,7 @@ def scatter_algos(data, output_file):
 
 
 def scatter_options(data, output_file):
-    fig, axs = plt.subplots(1, len(data["options"].unique()), figsize=(15, 15))
+    fig, axs = plt.subplots(1, len(data["options"].unique()), figsize=(15*len(data["options"].unique()), 15))
     fig.tight_layout(pad=2.0)
     for i, type_ in enumerate(data["options"].unique()):
         ax = axs[i]
@@ -54,6 +55,7 @@ def scatter_options(data, output_file):
 
             # Set labels and title
             ax.set_xlabel('Threads')
+            ax.set_xscale("log", base=2)
             ax.set_ylabel('Time')
             ax.set_title(f'{type_}')
             ax.grid(True)
@@ -67,7 +69,7 @@ def boxplots(data, output_file):
     num_threads = data["threads"].unique()
     algos = data["algo"].unique()
     options = data["options"].unique()
-    fig, axs = plt.subplots(len(algos), len(options), figsize=(15, 15))
+    fig, axs = plt.subplots(len(algos), len(options), figsize=(15*len(options), 15*len(algos)))
     fig.tight_layout(pad=5.0)
     for x, algo in enumerate(algos):
         for y, option in enumerate(options):
