@@ -1,13 +1,11 @@
 #!/bin/env python3
 import argparse
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def main(input_file: str, output_file: str | None):
-    image = []
-    with open(input_file) as f:
-        for line in f:
-            image.append([int(i) for i in line.split(",")])
+    image = np.loadtxt(input_file, delimiter=",", dtype=np.uint16)
 
     plt.imshow(image, interpolation="none")
 
