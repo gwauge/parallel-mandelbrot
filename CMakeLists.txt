@@ -25,12 +25,12 @@ list(APPEND O2
     "-O2" 
     "-march=core-avx2" 
 )
-list(APPEND O2_STRICT 
+list(APPEND O2-STRICT 
     "-O2" 
     "-fp-model=strict"
     "-march=core-avx2" 
 )
-list(APPEND O2_PRECISE
+list(APPEND O2-PRECISE
     "-O2" 
     "-fp-model=precise"
     "-march=core-avx2" 
@@ -39,12 +39,12 @@ list(APPEND O3
     "-O3" 
     "-march=core-avx2" 
 )
-list(APPEND O3_STRICT 
+list(APPEND O3-STRICT 
     "-O3" 
     "-fp-model=strict"
     "-march=core-avx2" 
 )
-list(APPEND O3_PRECISE
+list(APPEND O3-PRECISE
     "-O3" 
     "-fp-model=precise"
     "-march=core-avx2" 
@@ -53,12 +53,12 @@ list(APPEND O1
     "-O1" 
     "-march=core-avx2" 
 )
-list(APPEND O1_STRICT 
+list(APPEND O1-STRICT 
     "-O1" 
     "-fp-model=strict"
     "-march=core-avx2" 
 )
-list(APPEND O1_PRECISE
+list(APPEND O1-PRECISE
     "-O1" 
     "-fp-model=precise"
     "-march=core-avx2" 
@@ -67,29 +67,29 @@ list(APPEND O0
     "-O0" 
     "-march=core-avx2" 
 )
-list(APPEND O0_STRICT 
+list(APPEND O0-STRICT 
     "-O0" 
     "-fp-model=strict"
     "-march=core-avx2" 
 )
-list(APPEND O0_PRECISE
+list(APPEND O0-PRECISE
     "-O0" 
     "-fp-model=precise"
     "-march=core-avx2" 
 )
 list(APPEND OPTIONS 
     "O2"
-    "O2_STRICT"
-    "O2_PRECISE"
+    "O2-STRICT"
+    "O2-PRECISE"
     "O3"
-    "O3_STRICT"
-    "O3_PRECISE"
+    "O3-STRICT"
+    "O3-PRECISE"
     "O1"
-    "O1_STRICT"
-    "O1_PRECISE"
+    "O1-STRICT"
+    "O1-PRECISE"
     "O0"
-    "O0_STRICT"
-    "O0_PRECISE"
+    "O0-STRICT"
+    "O0-PRECISE"
 )
 
 # Add the executables
