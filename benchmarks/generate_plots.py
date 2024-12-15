@@ -3,6 +3,7 @@ import os
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
+import math
 
 SHOW_PLOTS = False
 
@@ -13,13 +14,10 @@ def read_metrics(filename):
 
 
 def scatter_algos(data, output_file):
-    # Create a figure for subplots
-    fig, axs = plt.subplots(1, len(data["algo"].unique()), figsize=(15*len(data["algo"].unique()), 15))
-    fig.tight_layout(pad=2.0)
-
     # Plotting each category and type combination in its respective subplot
-    for i, category in enumerate(data["algo"].unique()):
-        ax = axs[i]
+    for _, category in enumerate(data["algo"].unique()):
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15))
+        fig.tight_layout(pad=2.0)
         for type_ in data["options"].unique():
 
             # Filter the data based on category and type
@@ -36,8 +34,8 @@ def scatter_algos(data, output_file):
             ax.grid(True)
             ax.legend()
 
-    plt.savefig(output_file)
-    plt.close(fig)
+        plt.savefig(f"{output_file}_{category}")
+        plt.close(fig)
 
 
 def scatter_options(data, output_file):
@@ -69,23 +67,25 @@ def boxplots(data, output_file):
     num_threads = data["threads"].unique()
     algos = data["algo"].unique()
     options = data["options"].unique()
-    fig, axs = plt.subplots(len(algos), len(options), figsize=(15*len(options), 15*len(algos)))
-    fig.tight_layout(pad=5.0)
-    for x, algo in enumerate(algos):
+    for _, algo in enumerate(algos):
+        fig, axs = plt.subplots(1, len(options), figsize=(15*len(options), 15))
+        fig.tight_layout(pad=5.0)
+        maximum = data[data["algo"] == algo].max()["time"]
         for y, option in enumerate(options):
-            ax = axs[x, y]
+            ax = axs[y]
             filtered_data = []
             for num_thread in num_threads:
                 filtered_data.append(data[(data["algo"] == algo) & (data["options"] == option) & (data["threads"] == num_thread)]["time"])
             ax.boxplot(filtered_data)
             ax.set_xticks([y + 1 for y in range(len(filtered_data))],
                   labels=num_threads)
+            ax.set_ylim(bottom=0, top=maximum)
             ax.set_xlabel('Number of threads')
             ax.set_ylabel('Time in ms')
             ax.set_title(f"{algo} - {option}")
 
-    plt.savefig(output_file)
-    plt.close(fig)
+        plt.savefig(f"{output_file}_{algo}")
+        plt.close(fig)
 
 
 # Plot performance vs threads
