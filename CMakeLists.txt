@@ -9,3 +9,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Normal build
 add_subdirectory(src)
+
+# GPU
+add_subdirectory(gpu/cuda)
+add_subdirectory(gpu/rocm)
+add_subdirectory(gpu/sycl)
