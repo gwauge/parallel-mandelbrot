@@ -13,8 +13,10 @@ int main(int argc, char **argv)
 
     if (argc < 2)
     {
-        cerr << "Please specify the output file as a parameter." << endl;
-        return -1;
+        //cerr << "Please specify the output file as a parameter." << endl;
+        //return -1;
+        cout << mandelbrot_computation(matrix_out, false) << endl;
+        return 0;
     }
 
     matrix_out.open(argv[1], ios::trunc);
@@ -24,7 +26,7 @@ int main(int argc, char **argv)
         return -2;
     }
 
-    cout << mandelbrot_computation(matrix_out) << endl;
+    cout << mandelbrot_computation(matrix_out, true) << endl;
 
     return 0;
 }

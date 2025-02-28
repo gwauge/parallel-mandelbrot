@@ -1,7 +1,7 @@
 #include "mandelbrot.hpp"
 
 #ifdef DYNAMIC_MULTITHREADING_SP
-int64_t mandelbrot_computation(ofstream &matrix_out)
+int64_t mandelbrot_computation(ofstream &matrix_out, bool output)
 {
     uint16_t *const image = new uint16_t[HEIGHT * WIDTH];
 
@@ -33,19 +33,21 @@ int64_t mandelbrot_computation(ofstream &matrix_out)
     cerr << "Time elapsed: "
          << difference
          << " milliseconds." << endl;
-    for (int row = 0; row < HEIGHT; row++)
-    {
-        for (int col = 0; col < WIDTH; col++)
+    if (output) { 
+        for (int row = 0; row < HEIGHT; row++)
         {
-            matrix_out << image[row * WIDTH + col];
+            for (int col = 0; col < WIDTH; col++)
+            {
+                matrix_out << image[row * WIDTH + col];
 
-            if (col < WIDTH - 1)
-                matrix_out << ',';
+                if (col < WIDTH - 1)
+                    matrix_out << ',';
+            }
+            if (row < HEIGHT - 1)
+                matrix_out << endl;
         }
-        if (row < HEIGHT - 1)
-            matrix_out << endl;
+        matrix_out.close();
     }
-    matrix_out.close();
 
     delete[] image; // It's here for coding style, but useless
     return difference;

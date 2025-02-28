@@ -3,7 +3,7 @@
 
 #ifdef AVX2_DP_OPTIMIZED
 
-int64_t mandelbrot_computation(ofstream &matrix_out)
+int64_t mandelbrot_computation(ofstream &matrix_out, bool output)
 {
     //uint64_t *const image = new uint64_t[HEIGHT * WIDTH];
     uint16_t *const image = new uint16_t[HEIGHT * WIDTH];
@@ -73,19 +73,21 @@ int64_t mandelbrot_computation(ofstream &matrix_out)
          << difference
          << " milliseconds." << endl;
 
-    for (uint row = 0; row < HEIGHT; row++)
-    {
-        for (uint col = 0; col < WIDTH; col++)
+    if (output) {
+        for (uint row = 0; row < HEIGHT; row++)
         {
-            matrix_out << image[row * WIDTH + col];
+            for (uint col = 0; col < WIDTH; col++)
+            {
+                matrix_out << image[row * WIDTH + col];
 
-            if (col < WIDTH - 1)
-                matrix_out << ',';
+                if (col < WIDTH - 1)
+                    matrix_out << ',';
+            }
+            if (row < HEIGHT - 1)
+                matrix_out << endl;
         }
-        if (row < HEIGHT - 1)
-            matrix_out << endl;
+        matrix_out.close();
     }
-    matrix_out.close();
 
     delete[] image; // It's here for coding style, but useless
     return difference;

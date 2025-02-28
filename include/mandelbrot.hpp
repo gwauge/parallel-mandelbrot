@@ -14,7 +14,7 @@
 #define RATIO_Y (MAX_Y - MIN_Y)
 
 // Image size
-#define RESOLUTION 1000
+#define RESOLUTION 15000
 #define WIDTH (RATIO_X * RESOLUTION)
 #define HEIGHT (RATIO_Y * RESOLUTION)
 
@@ -22,8 +22,8 @@
 
 #define DEGREE 2 // Degree of the polynomial
 // Maximum 65535 due to datatype uint16_t
-#define ITERATIONS 1000 // Maximum number of iterations
+#define ITERATIONS 10000 // Maximum number of iterations
 
 using namespace std;
 
-int64_t mandelbrot_computation(ofstream &matrix_out);
+int64_t mandelbrot_computation(ofstream &matrix_out, bool output);
