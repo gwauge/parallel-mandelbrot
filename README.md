@@ -3,7 +3,7 @@ Parallel implementation of mandelbrot. Created as part of the final assignment f
 
 ## How to run
 ```bash
-source /opt/intel/oneapi/setvars.sh
+source /opt/intel/oneapi/setvars.sh --include-intel-llvm
 make clean
 make run
 ```

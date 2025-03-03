@@ -14,7 +14,9 @@ list(APPEND BASE_OPTIONS
 add_executable(cuda_sp ../../main.cpp cuda_sp.cu)
 target_compile_options(cuda_sp PRIVATE ${BASE_OPTIONS})
 target_link_options(cuda_sp PRIVATE ${BASE_OPTIONS})
+set_target_properties(cuda_sp PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cuda)
 
 add_executable(cuda_dp ../../main.cpp cuda_dp.cu)
 target_compile_options(cuda_dp PRIVATE ${BASE_OPTIONS})
 target_link_options(cuda_dp PRIVATE ${BASE_OPTIONS})
+set_target_properties(cuda_dp PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cuda)

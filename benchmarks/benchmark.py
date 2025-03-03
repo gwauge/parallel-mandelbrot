@@ -63,7 +63,7 @@ def get_jobs(skip_baseline: bool, only_baseline: bool):
 
     # get all binaries in the build directory
     binaries = []
-    for root, dirs, files in os.walk("../build/bin"):
+    for root, dirs, files in os.walk("../build/bin/basic"):
         for file in files:
 
             # Skip the baseline binaries
@@ -108,7 +108,7 @@ def run_job(
 
     shell_script = f"""
     # set oneAPI environment
-    source /opt/intel/oneapi/setvars.sh
+    source /opt/intel/oneapi/setvars.sh --include-intel-llvm
 
     # warm up
     for _ in $(seq 1 {num_warmup_runs}); do
