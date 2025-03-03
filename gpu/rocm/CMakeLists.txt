@@ -1,6 +1,19 @@
-set(CMAKE_CXX_COMPILER hipcc) # use Intel C++ compiler
-        
-add_compile_options(-O3 --offload-arch=gfx1103 -DNDEBUG -ffast-math)
-add_executable(rocm_sp ../../main.cpp rocm_sp.cpp)
-add_executable(rocm_sp_tiled ../../main.cpp rocm_sp_tiled.cpp)
-add_executable(rocm_dp ../../main.cpp rocm_dp.cpp)
+project(parallel-mandelbrot-rocm LANGUAGES CXX HIP)
+       
+list(APPEND BASE_OPTIONS
+    "-O3"
+    "-ffast-math"
+)
+
+set(CMAKE_HIP_ARCHITECTURES gfx1103)
+file(GLOB SRC_FILES *.hip)
+
+message("ROCM Targets:")
+
+foreach(SRC_FILE ${SRC_FILES})
+    get_filename_component(FILE_NAME ${SRC_FILE} NAME_WE)
+    #string(TOUPPER ${FILE_NAME} DEF_NAME) # capitalize the file name
+    message(${FILE_NAME})
+    add_executable(${FILE_NAME} ../../main.cpp ${SRC_FILE})
+    target_compile_options(${FILE_NAME} PRIVATE ${BASE_OPTIONS})
+endforeach()

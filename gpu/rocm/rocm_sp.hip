@@ -22,13 +22,13 @@ using namespace std::chrono;
 // Adapted kernel using a 2D grid, __restrict__ for the pointer, and precomputed values.
 __global__ void mandelbrot_kernel_2D(uint16_t* __restrict__ image) {
     // Compute 2D thread indices.
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    uint col = blockIdx.x * blockDim.x + threadIdx.x;
+    uint row = blockIdx.y * blockDim.y + threadIdx.y;
     
     if (row < HEIGHT && col < WIDTH) {
-        float cr = col * STEP + MIN_X;
-        float ci = row * STEP + MIN_Y;
-        int iter = 1;
+        float cr = (float) col * (float) STEP + (float) MIN_X;
+        float ci = (float) row * (float) STEP + (float) MIN_Y;
+        uint16_t iter = 1;
         float zr = 0.0f, zi = 0.0f;
 
         // Compute Mandelbrot iterations: z = z^2 + c.
@@ -57,12 +57,12 @@ int64_t mandelbrot_computation(ofstream &matrix_out, bool output) {
     HIP_CALL(hipMalloc(&d_image, num_pixels * sizeof(uint16_t)));
     
     // Set up a 2D grid: using 16x16 threads per block (256 threads per block).
-    dim3 blockDim(8, 8);
-    dim3 gridDim((WIDTH + blockDim.x - 1) / blockDim.x, (HEIGHT + blockDim.y - 1) / blockDim.y);
+    dim3 localBlockDim(8, 8);
+    dim3 localGridDim((WIDTH + localBlockDim.x - 1) / localBlockDim.x, (HEIGHT + localBlockDim.y - 1) / localBlockDim.y);
     
     
     // Launch the optimized kernel.
-    hipLaunchKernelGGL(mandelbrot_kernel_2D, gridDim, blockDim, 0, 0, d_image);
+    hipLaunchKernelGGL(mandelbrot_kernel_2D, localGridDim, localBlockDim, 0, 0, d_image);
     
     // Synchronize to ensure kernel execution is complete.
     HIP_CALL(hipDeviceSynchronize());

@@ -25,23 +25,22 @@ int64_t mandelbrot_computation(ofstream &matrix_out, bool output) {
 
             // Launch a 2D kernel for each pixel.
             h.parallel_for(range<2>(HEIGHT, WIDTH), [=](id<2> idx) {
-                int row = idx[0];
-                int col = idx[1];
+                size_t row = idx[0];
+                size_t col = idx[1];
 
                 // Map pixel coordinate to a point in the complex plane.
                 // Using macros from mandelbrot.hpp for MIN_X, STEP, etc.
-                float cr = col * STEP + MIN_X;
-                float ci = row * STEP + MIN_Y;
-                int iter = 0;
+                float cr = (float) col * (float) STEP + (float) MIN_X;
+                float ci = (float) row * (float) STEP + (float) MIN_Y;
+                uint16_t iter = 1;
                 float zr = 0.0f, zi = 0.0f;
 
                 // Compute Mandelbrot iterations: z = z^2 + c.
-                for (int i = 1; i <= ITERATIONS; i++) {
+                for (; iter <= ITERATIONS; ++iter) {
                     float new_zr = zr * zr - zi * zi + cr;
                     float new_zi = 2.0f * zr * zi + ci;
                     zr = new_zr;
                     zi = new_zi;
-                    iter = i;
                     if (zr * zr + zi * zi >= 4.0f)
                         break;
                 }

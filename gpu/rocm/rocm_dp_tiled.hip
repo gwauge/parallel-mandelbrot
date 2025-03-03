@@ -20,32 +20,31 @@ using namespace std::chrono;
 // Kernel that computes Mandelbrot for a tile of the image.
 // The tile's upper-left corner is specified by (tile_row_offset, tile_col_offset).
 __global__ void mandelbrot_kernel_tile(uint16_t* __restrict__ image,
-                                       int image_width,
-                                       int image_height,
-                                       int tile_row_offset,
-                                       int tile_col_offset) {
+                                       uint image_width,
+                                       uint image_height,
+                                       uint tile_row_offset,
+                                       uint tile_col_offset) {
     // Compute local thread indices within the tile.
-    int local_x = blockIdx.x * blockDim.x + threadIdx.x;
-    int local_y = blockIdx.y * blockDim.y + threadIdx.y;
+    uint local_x = blockIdx.x * blockDim.x + threadIdx.x;
+    uint local_y = blockIdx.y * blockDim.y + threadIdx.y;
     
     // Compute the corresponding global image coordinates.
-    int global_x = tile_col_offset + local_x;
-    int global_y = tile_row_offset + local_y;
+    uint global_x = tile_col_offset + local_x;
+    uint global_y = tile_row_offset + local_y;
     
     if (global_x < image_width && global_y < image_height) {
         // Map pixel to complex plane.
-        float cr = global_x * STEP + MIN_X;
-        float ci = global_y * STEP + MIN_Y;
-        int iter = 0;
+        float cr = (float) global_x * (float) STEP + (float) MIN_X;
+        float ci = (float) global_y * (float) STEP + (float) MIN_Y;
+        uint16_t iter = 1;
         float zr = 0.0f, zi = 0.0f;
         
         // Compute the Mandelbrot iterations.
-        for (int i = 0; i < ITERATIONS; i++) {
+        for (; iter < ITERATIONS; ++iter) {
             float new_zr = zr * zr - zi * zi + cr;
             float new_zi = 2.0f * zr * zi + ci;
             zr = new_zr;
             zi = new_zi;
-            iter = i + 1; // iteration count (starting at 1)
             if (zr * zr + zi * zi >= 4.0f)
                 break;
         }
@@ -70,23 +69,23 @@ int64_t mandelbrot_computation(ofstream &matrix_out, bool output) {
     const int tile_height = 1024;
     
     // Block dimensions for each tile kernel launch.
-    dim3 blockDim(16, 16);
+    dim3 localBlockDim(16, 16);
     
     
     // Loop over the image by tiles.
     for (int row_offset = 0; row_offset < HEIGHT; row_offset += tile_height) {
         for (int col_offset = 0; col_offset < WIDTH; col_offset += tile_width) {
             // Compute current tile's actual size (for edge cases).
-            int current_tile_width = std::min(tile_width, WIDTH - col_offset);
-            int current_tile_height = std::min(tile_height, HEIGHT - row_offset);
+            uint32_t current_tile_width = (uint32_t) std::min(tile_width, WIDTH - col_offset);
+            uint32_t current_tile_height = (uint32_t) std::min(tile_height, HEIGHT - row_offset);
             
             // Compute grid dimensions for the current tile.
-            dim3 gridDim((current_tile_width + blockDim.x - 1) / blockDim.x,
-                         (current_tile_height + blockDim.y - 1) / blockDim.y);
+            dim3 localGridDim((current_tile_width + localBlockDim.x - 1) / localBlockDim.x,
+                         (current_tile_height + localBlockDim.y - 1) / localBlockDim.y);
             
             // Launch the kernel for this tile.
             hipLaunchKernelGGL(mandelbrot_kernel_tile,
-                               gridDim, blockDim, 0, 0,
+                               localGridDim, localBlockDim, 0, 0,
                                d_image, WIDTH, HEIGHT, row_offset, col_offset);
             //HIP_CALL(hipDeviceSynchronize());
         }

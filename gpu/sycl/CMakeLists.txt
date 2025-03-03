@@ -1,18 +1,32 @@
 set(CMAKE_CXX_COMPILER icpx) # use Intel C++ compiler
 
-add_executable(sycl_cpu_sp ../../main.cpp sycl_sp.cpp)
-target_compile_options(sycl_cpu_sp PRIVATE -fsycl)
-target_link_options(sycl_cpu_sp PRIVATE -fsycl)
+list(APPEND BASE_OPTIONS
+    "-fsycl"
+    "-O3"
+)
 
-add_executable(sycl_cpu_dp ../../main.cpp sycl_dp.cpp)
-target_compile_options(sycl_cpu_dp PRIVATE -fsycl)
-target_link_options(sycl_cpu_dp PRIVATE -fsycl)
+list(APPEND ROCM_OPTIONS
+    "-fsycl-targets=amdgcn-amd-amdhsa"
+    "-Xsycl-target-backend"
+    "--offload-arch=gfx1103"
+)
 
-# AMD ROCM target
-add_executable(sycl_rocm_sp ../../main.cpp sycl_sp.cpp)
-target_link_options(sycl_rocm_sp PRIVATE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend --offload-arch=gfx1103)
-target_compile_options(sycl_rocm_sp PRIVATE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend --offload-arch=gfx1103)
+file(GLOB SRC_FILES *.cpp)
 
-add_executable(sycl_rocm_dp ../../main.cpp sycl_dp.cpp)
-target_link_options(sycl_rocm_dp PRIVATE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend --offload-arch=gfx1103)
-target_compile_options(sycl_rocm_dp PRIVATE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend --offload-arch=gfx1103)
+message("SYCL Targets:")
+
+foreach(SRC_FILE ${SRC_FILES})
+    get_filename_component(FILE_NAME ${SRC_FILE} NAME_WE)
+
+    string(CONCAT TARGET_NAME ${FILE_NAME} "_cpu")
+    message(${TARGET_NAME})
+    add_executable(${TARGET_NAME} ../../main.cpp ${SRC_FILE})
+    target_compile_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS})
+    target_link_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS})
+
+    string(CONCAT TARGET_NAME ${FILE_NAME} "_rocm")
+    message(${TARGET_NAME})
+    add_executable(${TARGET_NAME} ../../main.cpp ${SRC_FILE})
+    target_compile_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS} ${ROCM_OPTIONS})
+    target_link_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS} ${ROCM_OPTIONS})
+endforeach()
