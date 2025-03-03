@@ -5,7 +5,7 @@ set -e
 
 # check if inside CI environment
 if [ ! -n "$CI" ]; then
-    source /opt/intel/oneapi/setvars.sh --include-intel-llvm
+    source /opt/intel/oneapi/setvars.sh --include-intel-llvm --force
 fi
 
 # Check if script is run from root directory
@@ -28,4 +28,4 @@ cd build || exit
 cmake ..
 
 # Compile files
-make -j8
+make -j
