@@ -11,6 +11,10 @@ list(APPEND ROCM_OPTIONS
     "--offload-arch=gfx1103"
 )
 
+list(APPEND CUDA_OPTIONS
+    "-fsycl-targets=nvptx64-nvidia-cuda"
+)
+
 file(GLOB SRC_FILES *.cpp)
 
 message("SYCL Targets:")
@@ -29,4 +33,11 @@ foreach(SRC_FILE ${SRC_FILES})
     add_executable(${TARGET_NAME} ../../main.cpp ${SRC_FILE})
     target_compile_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS} ${ROCM_OPTIONS})
     target_link_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS} ${ROCM_OPTIONS})
+
+    string(CONCAT TARGET_NAME ${FILE_NAME} "_cuda")
+    message(${TARGET_NAME})
+    add_executable(${TARGET_NAME} ../../main.cpp ${SRC_FILE})
+    target_compile_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS} ${CUDA_OPTIONS})
+    target_link_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS} ${CUDA_OPTIONS})
+
 endforeach()
