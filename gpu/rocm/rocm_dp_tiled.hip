@@ -34,15 +34,15 @@ __global__ void mandelbrot_kernel_tile(uint16_t* __restrict__ image,
     
     if (global_x < image_width && global_y < image_height) {
         // Map pixel to complex plane.
-        float cr = (float) global_x * (float) STEP + (float) MIN_X;
-        float ci = (float) global_y * (float) STEP + (float) MIN_Y;
+        double cr = (double) global_x *  STEP +  MIN_X;
+        double ci = (double) global_y *  STEP +  MIN_Y;
         uint16_t iter = 1;
-        float zr = 0.0f, zi = 0.0f;
+        double zr = 0.0f, zi = 0.0f;
         
         // Compute the Mandelbrot iterations.
         for (; iter < ITERATIONS; ++iter) {
-            float new_zr = zr * zr - zi * zi + cr;
-            float new_zi = 2.0f * zr * zi + ci;
+            double new_zr = zr * zr - zi * zi + cr;
+            double new_zi = 2.0f * zr * zi + ci;
             zr = new_zr;
             zi = new_zi;
             if (zr * zr + zi * zi >= 4.0f)
