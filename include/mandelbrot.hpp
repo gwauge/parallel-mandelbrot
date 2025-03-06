@@ -14,15 +14,19 @@
 #define RATIO_Y (MAX_Y - MIN_Y)
 
 // Image size
+#ifndef RESOLUTION
 #define RESOLUTION 1000
+#endif
+
 #define WIDTH (RATIO_X * RESOLUTION)
 #define HEIGHT (RATIO_Y * RESOLUTION)
 
 #define STEP ((double)RATIO_X / WIDTH)
 
-#define DEGREE 2 // Degree of the polynomial
+#ifndef ITERATIONS
 // Maximum 65535 due to datatype uint16_t
 #define ITERATIONS 1000 // Maximum number of iterations
+#endif
 
 using namespace std;
 
