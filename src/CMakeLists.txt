@@ -4,6 +4,7 @@ list(APPEND BASE_OPTIONS
     # Enable OpenMP
     "-qopenmp"
     "-qopt-report=3"
+    "-fsave-optimization-record=yaml"
 )
 
 list(APPEND O2 
@@ -91,6 +92,8 @@ foreach(SRC_FILE ${SRC_FILES})
         target_compile_definitions(${TARGET_NAME} PRIVATE ${DEF_NAME}) # add definition
         target_compile_options(${TARGET_NAME} PRIVATE -qopt-report-file=${TARGET_NAME}.txt)
         target_link_options(${TARGET_NAME} PRIVATE -qopt-report-file=${TARGET_NAME}.txt)
+        target_compile_options(${TARGET_NAME} PRIVATE  -foptimization-record-file=${TARGET_NAME}.yml)
+        target_link_options(${TARGET_NAME} PRIVATE  -foptimization-record-file=${TARGET_NAME}.yml)
         target_compile_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS} ${${OPTION}})
         target_link_options(${TARGET_NAME} PRIVATE ${BASE_OPTIONS} ${${OPTION}})
         target_link_libraries(${TARGET_NAME} "-qopenmp")
