@@ -1,9 +1,11 @@
 #!/bin/bash
-
-for file in ../build/bin/*; do
+for file in ../build/bin/basic/*; do
     # extract filename from path
     filename=$(basename $file)
-
     echo -e "\tRunning $filename"
-    /opt/intel/oneapi/advisor/2024.1/bin64/advisor -collect roofline -trip-counts -flop -module-filter-mode=exclude -mrte-mode=auto -interval=10 -data-limit=500 -stackwalk-mode=offline -stack-unwind-limit=8388608 -stack-stitching -mkl-user-mode -no-profile-python -no-support-multi-isa-binaries -no-spill-analysis -no-static-instruction-mix -auto-finalize -show-report -no-profile-gpu -gpu-sampling-interval=1 -profile-intel-perf-libs --app-working-dir="$(pwd)/working_dir" --project-dir="./${filename}" -- "$(pwd)/../build/bin/${filename}" "${filename}"
+    advisor -collect=roofline -flop -stacks -trip-counts -project-dir "./${filename}" --search-dir src:r="$(pwd)/../src" --app-working-dir="$(pwd)/
+working_dir" -- "$(pwd)/../build/bin/basic/${filename}"
+    advisor --snapshot --project-dir="./${filename}" --pack --cache-sources --cache-binaries --search-dir src:r="$(pwd)/../src" -- "./${filename}"
+    advisor --report=survey --with-stack --format=csv --project-dir="./${filename}" --show-all-columns --report-output="./${filename}.csv"
 done
+zip results.zip *.csv *.advixeexpz
