@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 import os
 import argparse
+import re
+
 import pandas as pd
 import matplotlib.pyplot as plt
-import math
 
 SHOW_PLOTS = False
 
@@ -13,7 +14,45 @@ def read_metrics(filename):
     return pd.read_csv(filename)
 
 
+def reorder_file_name(file_name):
+    """ Fix incorrect file names """
+    match = re.match(r'^(.*)_(sp|dp)_(optimized|simd)(.*)$', file_name)
+    if match:
+        prefix, precision, optimization, suffix = match.groups()
+        return f"{prefix}_{optimization}_{precision}{suffix}"
+    return file_name
+
+
+def parse_filename(filename):
+    """ Parse filename into implementation, precision, optimization, and precision mode """
+    match = re.match(r'^(.*)_(sp|dp)_(O[0-3])(?:-(.*))?$', filename)
+    if match:
+        implementation, precision, optimization, precision_mode = match.groups()
+    else:
+        implementation, precision, optimization, precision_mode = None, None, None, None
+    return implementation, precision, optimization, precision_mode
+
+
+def fix_data(data):
+    # Group by 'file' and 'threads' and calculate the median of 'time'
+    data = data.groupby(['file', 'threads'], as_index=False)['time'].median()
+
+    # fix incorrect file names
+    data['file'] = data['file'].apply(reorder_file_name)
+
+    # parse filenames
+    data[['implementation', 'precision', 'optimization', 'precision_mode']] = data['file'].apply(
+        lambda x: pd.Series(parse_filename(x))
+    )
+
+    return data
+
+
 def scatter_algos(data, output_file):
+    # check if output directory exists
+    if not os.path.exists(output_file):
+        os.makedirs(output_file)
+
     # Plotting each category and type combination in its respective subplot
     for _, category in enumerate(data["algo"].unique()):
         fig, ax = plt.subplots(1, 1, figsize=(15, 15))
@@ -34,7 +73,7 @@ def scatter_algos(data, output_file):
             ax.grid(True)
             ax.legend()
 
-        plt.savefig(f"{output_file}_{category}")
+        plt.savefig(os.path.join(output_file, f"{category}.png"))
         plt.close(fig)
 
 
@@ -64,6 +103,9 @@ def scatter_options(data, output_file):
 
 
 def boxplots(data, output_file):
+    if not os.path.exists(output_file):
+        os.makedirs(output_file)
+
     num_threads = data["threads"].unique()
     algos = data["algo"].unique()
     options = data["options"].unique()
@@ -84,7 +126,7 @@ def boxplots(data, output_file):
             ax.set_ylabel('Time in ms')
             ax.set_title(f"{algo} - {option}")
 
-        plt.savefig(f"{output_file}_{algo}")
+        plt.savefig(os.path.join(output_file, f"{algo}.png"))
         plt.close(fig)
 
 
@@ -153,6 +195,44 @@ def plot_efficiency(data, output_file):
         plt.show()
 
 
+def scatter_implementation_with_fixed_params(
+    data: pd.DataFrame,
+    output_file: str,
+    implementations: list[str] | dict[str, str],
+    precision: str = "dp",
+    optimization: str = "O3",
+    precision_mode: str | None = None
+):
+    fig, ax = plt.subplots(1, 1)  # use figsize=(15, 15)) for square plot
+
+    keys = list(implementations.keys()) if isinstance(implementations, dict) else implementations
+
+    # Filter data
+    filtered_df = data[
+        (data['implementation'].isin(keys)) &
+        (data['precision'] == precision) &
+        (data['optimization'] == optimization) &
+        (data['precision_mode'].isna() if precision_mode is None
+         else data['precision_mode'] == precision_mode)
+    ]
+
+    # Generate scatter plot with different colors and labels for each implementation
+    for implementation in filtered_df['implementation'].unique():
+        subset = filtered_df[filtered_df['implementation'] == implementation]
+        label = implementations[implementation] if isinstance(implementations, dict) else implementation
+        ax.scatter(subset['threads'], subset['time'], label=label)
+
+    ax.set_title(f"Precision: {precision} | Optimization: {optimization} | Precision Mode: {'N/A' if not precision_mode else precision_mode}")
+    ax.set_xlabel('Threads')
+    ax.set_xscale("log", base=2)
+    ax.set_ylabel('Time in ms')
+    ax.grid(True)
+    ax.legend()
+
+    plt.savefig(output_file)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
 
     # Read command line arguments
@@ -192,6 +272,8 @@ if __name__ == "__main__":
     plot_efficiency(
         data,
         os.path.join(args.output_dir, "efficiency_vs_threads.png"))
+
+    """
     scatter_algos(
         data,
         os.path.join(args.output_dir, "algos"))
@@ -201,3 +283,50 @@ if __name__ == "__main__":
     boxplots(
         data,
         os.path.join(args.output_dir, "boxplot"))
+    """
+
+    # Report graphs
+    data = fix_data(data)
+
+    # Plot baseline, static, dynamic
+    scatter_implementation_with_fixed_params(
+        data,
+        os.path.join(args.output_dir, "multithreading"),
+        implementations={
+            'baseline': 'Baseline',
+            'static_multithreading': 'Static multithreading',
+            'dynamic_multithreading': 'Dynamic multithreading'
+        },
+        precision='dp',
+        optimization='O3',
+        precision_mode=None
+    )
+
+    # Plot dynamic, no_complex
+    scatter_implementation_with_fixed_params(
+        data,
+        os.path.join(args.output_dir, "no-complex"),
+        implementations={
+            'dynamic_multithreading': 'std::complex',
+            'no_complex': 'Custom complex'
+        },
+        precision='dp',
+        optimization='O3',
+        precision_mode=None
+    )
+
+    scatter_implementation_with_fixed_params(
+        data,
+        os.path.join(args.output_dir, "simd"),
+        implementations={
+            'avx2': 'Manual avx2',
+            'avx2_optimized': 'Optimized manual avx2',
+            'no_complex': 'Custom complex',
+            'no_complex_simd': 'Custom complex using SIMD',
+            'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
+            'dynamic_multithreading': 'Dynamic multithreading'
+        },
+        precision='dp',
+        optimization='O3',
+        precision_mode=None
+    )
