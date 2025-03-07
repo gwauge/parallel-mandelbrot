@@ -18,6 +18,10 @@ LOGGER_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+    print("Telegram token and/or chat ID not found in environment variables")
+    exit(1)
+
 MAX_POTENTIAL_THREAD_COUNT = 32
 NUM_CORES_AVAILABLE = os.cpu_count()
 NUM_WARMUP_RUNS = 5
@@ -167,7 +171,8 @@ def scheduler(args):
         mininterval=5,
         total=len(jobs),
         desc="Progress",
-        unit="job")
+        unit="job",
+        disable=True if args.no_telegram else False)
 
     while jobs:
         binary, thread_count = jobs[0]  # Peek at the first job
@@ -231,6 +236,13 @@ if __name__ == "__main__":
         action="store_true",
         help="Enable verbose logging")
 
+    # disable telegram logging
+    parser.add_argument(
+        "--no-telegram",
+        action="store_true",
+        help="Disable telegram logging"
+    )
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--skip-baseline",
@@ -260,6 +272,9 @@ if __name__ == "__main__":
     BENCHMARK_FILE = args.output  # Set the benchmark file
 
     logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+
+    if args.no_telegram:
+        logger.removeHandler(logger.handlers[0])
 
     logger.info("Starting benchmarks")
     logger.info("CPU cores available: %d", NUM_CORES_AVAILABLE)
