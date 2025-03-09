@@ -5,6 +5,9 @@ import re
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+
+from matplotlib.ticker import ScalarFormatter
 
 SHOW_PLOTS = False
 
@@ -35,7 +38,7 @@ def parse_filename(filename):
 
 def fix_data(data):
     # Group by 'file' and 'threads' and calculate the median of 'time'
-    data = data.groupby(['file', 'threads'], as_index=False)['time'].median()
+    data = data.groupby(['file', 'threads'])['time'].agg(["mean", "median", "std"]).reset_index()
 
     # fix incorrect file names
     data['file'] = data['file'].apply(reorder_file_name)
@@ -63,17 +66,18 @@ def scatter_algos(data, output_file):
             filtered_data = data[(data["options"] == type_) & (data["algo"] == category)]
 
             # Plot the scatter plot for this category and type
-            ax.scatter(filtered_data['threads'], filtered_data['time'], label=f'{type_}')
+            ax.scatter(filtered_data['threads'], filtered_data['medain'], label=f'{type_}')
 
             # Set labels and title
             ax.set_xlabel('Threads')
             ax.set_ylabel('Time')
             ax.set_xscale("log", base=2)
+            ax.xaxis.set_major_formatter("{x:.0f}")
             ax.set_title(f'{category.capitalize()}')
             ax.grid(True)
             ax.legend()
 
-        plt.savefig(os.path.join(output_file, f"{category}.png"))
+        plt.savefig(os.path.join(output_file, f"{category}.png"), dpi=1200)
         plt.close(fig)
 
 
@@ -88,17 +92,18 @@ def scatter_options(data, output_file):
             filtered_data = data[(data["options"] == type_) & (data["algo"] == category)]
 
             # Plot the scatter plot for this category and type
-            ax.scatter(filtered_data['threads'], filtered_data['time'], label=f'{category}')
+            ax.errorbar(filtered_data['threads'], filtered_data['median'], yerr=filtered_data["std"], label=f'{category}')
 
             # Set labels and title
             ax.set_xlabel('Threads')
             ax.set_xscale("log", base=2)
+            ax.xaxis.set_major_formatter("{x:.0f}")
             ax.set_ylabel('Time')
             ax.set_title(f'{type_}')
             ax.grid(True)
             ax.legend()
 
-    plt.savefig(output_file)
+    plt.savefig(output_file, dpi=1200)
     plt.close(fig)
 
 
@@ -112,12 +117,12 @@ def boxplots(data, output_file):
     for _, algo in enumerate(algos):
         fig, axs = plt.subplots(1, len(options), figsize=(15*len(options), 15))
         fig.tight_layout(pad=5.0)
-        maximum = data[data["algo"] == algo].max()["time"]
+        maximum = data[data["algo"] == algo].max()["median"]
         for y, option in enumerate(options):
             ax = axs[y]
             filtered_data = []
             for num_thread in num_threads:
-                filtered_data.append(data[(data["algo"] == algo) & (data["options"] == option) & (data["threads"] == num_thread)]["time"])
+                filtered_data.append(data[(data["algo"] == algo) & (data["options"] == option) & (data["threads"] == num_thread)]["median"])
             ax.boxplot(filtered_data)
             ax.set_xticks([y + 1 for y in range(len(filtered_data))],
                   labels=num_threads)
@@ -126,73 +131,8 @@ def boxplots(data, output_file):
             ax.set_ylabel('Time in ms')
             ax.set_title(f"{algo} - {option}")
 
-        plt.savefig(os.path.join(output_file, f"{algo}.png"))
+        plt.savefig(os.path.join(output_file, f"{algo}.png"), dpi=1200)
         plt.close(fig)
-
-
-# Plot performance vs threads
-def plot_performance(data, output_file):
-    plt.figure(figsize=(10, 6))
-    plt.plot(
-        data['threads'],
-        data['time'],
-        marker='o',
-        label='Execution Time')
-    plt.title('Performance vs Threads')
-    plt.xlabel('Number of Threads')
-    plt.ylabel('Execution Time (s)')
-    plt.grid()
-    plt.legend()
-    plt.savefig(output_file)
-
-    if SHOW_PLOTS:
-        plt.show()
-
-
-# Plot speedup
-def plot_speedup(data, output_file):
-    baseline_time = data['time'].iloc[0]
-    speedup = baseline_time / data['time']
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(
-        data['threads'],
-        speedup, marker='o',
-        color='orange',
-        label='Speedup')
-    plt.title('Speedup vs Threads')
-    plt.xlabel('Number of Threads')
-    plt.ylabel('Speedup')
-    plt.grid()
-    plt.legend()
-    plt.savefig(output_file)
-
-    if SHOW_PLOTS:
-        plt.show()
-
-
-# Plot efficiency
-def plot_efficiency(data, output_file):
-    baseline_time = data['time'].iloc[0]
-    speedup = baseline_time / data['time']
-    efficiency = speedup / data['threads']
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(
-        data['threads'],
-        efficiency,
-        marker='o',
-        color='green',
-        label='Efficiency')
-    plt.title('Efficiency vs Threads')
-    plt.xlabel('Number of Threads')
-    plt.ylabel('Efficiency')
-    plt.grid()
-    plt.legend()
-    plt.savefig(output_file)
-
-    if SHOW_PLOTS:
-        plt.show()
 
 
 def scatter_implementation_with_fixed_params(
@@ -220,22 +160,134 @@ def scatter_implementation_with_fixed_params(
     for implementation in filtered_df['implementation'].unique():
         subset = filtered_df[filtered_df['implementation'] == implementation]
         label = implementations[implementation] if isinstance(implementations, dict) else implementation
-        ax.scatter(subset['threads'], subset['time'], label=label)
+        zorder = 5 + 1/subset["std"].max()
+        ax.errorbar(subset['threads'], subset['median'], yerr=subset["std"], zorder=zorder, capsize=3, linestyle="", marker="_", label=label)
+
 
     ax.set_title(f"Precision: {precision} | Optimization: {optimization} | Precision Mode: {'N/A' if not precision_mode else precision_mode}")
     ax.set_xlabel('Threads')
     ax.set_xscale("log", base=2)
+    ax.grid(axis="y", alpha=0.4)
+    ax.xaxis.set_major_formatter("{x:.0f}")
     ax.set_ylabel('Time in ms')
-    ax.grid(True)
     ax.legend()
 
-    plt.savefig(output_file)
+    plt.savefig(output_file, dpi=1200)
     plt.close(fig)
 
+def plot_speedup_efficiency_heatmaps(
+    data: pd.DataFrame,
+    output_file: str,
+    implementations: list[str] | dict[str, str],
+    precision: str = "dp",
+    optimization: str = "O3",
+    precision_mode: str | None = None
+): 
+    """
+    Filter the dataframe by the given parameters and compute speedup and efficiency.
+    Then, plot heatmaps for both metrics with numeric annotations.
+    """
+
+    keys = list(implementations.keys()) if isinstance(implementations, dict) else implementations
+
+    # Filter data
+    df_filtered = data[
+        (data['implementation'].isin(keys)) &
+        (data['precision'] == precision) &
+        (data['optimization'] == optimization) &
+        (data['precision_mode'].isna() if precision_mode is None
+         else data['precision_mode'] == precision_mode)
+    ]
+
+    baseline = data[
+        (data['implementation'] == "baseline") &
+        (data['precision'] == precision) &
+        (data['optimization'] == optimization) &
+        (data['precision_mode'].isna() if precision_mode is None
+         else data['precision_mode'] == precision_mode)
+    ]
+    
+    # Pivot the table: rows = unique file (configuration), columns = threads, values = mean time
+    pivot_mean = df_filtered.pivot(index="file", columns="threads", values="median")
+
+    pivot_baseline = baseline.pivot(index="file", columns="threads", values="median")
+
+    
+    # Make sure the pivot is sorted by threads
+    pivot_mean = pivot_mean.sort_index(axis=1)
+
+    pivot_baseline = pivot_baseline.sort_index(axis=1)
+
+    divider = pd.DataFrame({1: pivot_baseline[1].repeat(len(pivot_mean[1])).values} | {2**i: pivot_mean[1].values for i in range(1, 6)} | {"total" : pivot_baseline[1].repeat(len(pivot_mean[1])).values})
+    divider.index = pivot_mean.index
+
+    pivot_mean["total"] = pivot_mean[32]
+    
+    # Compute speedup: use the time for 1 thread as the baseline (each row should have a thread==1 value)
+    speedup = pivot_mean.rdiv(divider)
+    
+    # Compute efficiency: speedup divided by the number of threads
+    efficiency = speedup.copy()
+    for t in efficiency.columns:
+        divider_scalar = t
+        if t == "total":
+            divider_scalar = 32
+        efficiency[t] = efficiency[t] / divider_scalar
+    
+    def plot_heatmap(data, title, path, original_table, ylabel="Configuration"):
+        n_cols = data.shape[1]
+
+        fig, axes = plt.subplots(1, n_cols, figsize=(3+n_cols, 6), gridspec_kw={'wspace': 0.0})
+        if n_cols == 1:
+            axes = [axes]
+        for i, col in enumerate(data.columns):
+            ax = axes[i]
+            # Extract column data as a 2D array for imshow (n_rows x 1)
+            col_data = data[[col]]
+            # Set color normalization to the column's own min and max
+            vmin = col_data.min().min()
+            vmax = col_data.max().max()
+            norm = plt.Normalize(vmin, vmax)
+            im = ax.imshow(col_data.values, aspect="auto", cmap="plasma", vmin=vmin, vmax=vmax)
+            ax.set_xticks([0])
+            ax.set_xticklabels([data.columns[i]])
+        
+            # Remove x-axis ticks and set title as the column header
+        
+            # Only the first column gets the y-axis labels (configuration names)
+            if i == 0:
+                ax.set_yticks(np.arange(data.shape[0]))
+                ax.set_yticklabels([implementations[original_table[original_table["file"] == key].iloc[0]["implementation"]]  for key in data.index])
+                ax.set_ylabel(ylabel)
+            else:
+                ax.set_yticks([])
+            
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+        
+            # Annotate each cell with its value
+                    # Annotate each cell and set text color based on background luminance.
+            for j in range(col_data.shape[0]):
+                cell_value = col_data.iloc[j, 0]
+                # Get the RGBA value for the current cell's background
+                rgba = im.cmap(norm(cell_value))
+                # Compute luminance using the Rec. 709 formula
+                luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
+                # Choose black text for light backgrounds and white for dark backgrounds
+                text_color = "black" if luminance > 0.5 else "white"
+                ax.text(0, j, f"{cell_value:.2f}", ha="center", va="center", 
+                        color=text_color, fontsize=10)
+            
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.suptitle(title)
+        plt.savefig(path, dpi=1200)
+        plt.close()
+    
+    # Plot the heatmaps
+    plot_heatmap(speedup, f"Speedup Heatmap | {precision} | {optimization} | {precision_mode}", os.path.join(output_file, f"speedup_{precision}_{optimization}_{precision_mode}"), data)
+    plot_heatmap(efficiency, f"Efficiency Heatmap | {precision} | {optimization} | {precision_mode}", os.path.join(output_file, f"efficiency_{precision}_{optimization}_{precision_mode}"), data)
 
 if __name__ == "__main__":
-
-    # Read command line arguments
 
     # Parse command line arguments
     parser = argparse.ArgumentParser()
@@ -261,17 +313,8 @@ if __name__ == "__main__":
         os.makedirs(args.output_dir)
 
     data[['algo', 'options']] = data['file'].str.rsplit('_', n=1, expand=True)
-
-    # Create graphs
-    plot_performance(
-        data,
-        os.path.join(args.output_dir, "performance_vs_threads.png"))
-    plot_speedup(
-        data,
-        os.path.join(args.output_dir, "speedup_vs_threads.png"))
-    plot_efficiency(
-        data,
-        os.path.join(args.output_dir, "efficiency_vs_threads.png"))
+    # Report graphs
+    data = fix_data(data)
 
     """
     scatter_algos(
@@ -285,8 +328,6 @@ if __name__ == "__main__":
         os.path.join(args.output_dir, "boxplot"))
     """
 
-    # Report graphs
-    data = fix_data(data)
 
     # Plot baseline, static, dynamic
     scatter_implementation_with_fixed_params(
@@ -307,7 +348,8 @@ if __name__ == "__main__":
         data,
         os.path.join(args.output_dir, "no-complex"),
         implementations={
-            'dynamic_multithreading': 'std::complex',
+            'dynamic_multithreading_simd': 'std::complex::abs',
+            'dynamic_multithreading_simd_optimized': 'std::complex::norm',
             'no_complex': 'Custom complex'
         },
         precision='dp',
@@ -324,9 +366,30 @@ if __name__ == "__main__":
             'no_complex': 'Custom complex',
             'no_complex_simd': 'Custom complex using SIMD',
             'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
+            'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
             'dynamic_multithreading': 'Dynamic multithreading'
         },
         precision='dp',
         optimization='O3',
         precision_mode=None
     )
+
+    for optimization in ["O0", "O1", "O2", "O3"]:
+        plot_speedup_efficiency_heatmaps(data,
+            args.output_dir,
+            implementations={
+                'baseline' : "Baseline",
+                'static_multithreading' : "Static Multithreading",
+                'dynamic_multithreading' : "Dynamic Multitreading",
+                'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
+                'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
+                'dynamic_multithreading': 'Dynamic multithreading',
+                'no_complex': 'Custom complex',
+                'no_complex_simd': 'Custom complex using SIMD',
+                'avx2': 'Manual avx2',
+                'avx2_optimized': 'Optimized manual avx2',
+            },
+            precision='sp',
+            optimization=optimization,
+            precision_mode=None
+        )
