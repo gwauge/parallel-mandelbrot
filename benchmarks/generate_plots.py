@@ -175,6 +175,248 @@ def scatter_implementation_with_fixed_params(
     plt.savefig(output_file, dpi=1200)
     plt.close(fig)
 
+def plot_speedup_efficiency_heatmaps_precision(
+    data: pd.DataFrame,
+    output_file: str,
+    implementations: list[str] | dict[str, str],
+    optimization: str = "O3",
+    threads: int = 32,
+    precision_mode: str | None = None
+): 
+    """
+    Filter the dataframe by the given parameters and compute speedup and efficiency.
+    Then, plot heatmaps for both metrics with numeric annotations.
+    """
+
+    keys = list(implementations.keys()) if isinstance(implementations, dict) else implementations
+
+    # Filter data
+    df_filtered = data[
+        (data['implementation'].isin(keys)) &
+        (data['optimization'] == optimization) &
+        (data['threads'] == threads) & 
+        (data['precision_mode'].isna() if precision_mode is None
+         else data['precision_mode'] == precision_mode)
+    ]
+
+    pivot_mean = df_filtered.pivot(index="implementation", columns="precision", values="median")
+
+    pivot_mean = pivot_mean[["dp", "sp"]]
+
+    speedup = pivot_mean.rdiv(pivot_mean["dp"], axis=0)
+    
+    def plot_heatmap(data, title, path):
+        n_cols = data.shape[1]
+
+        fig, axes = plt.subplots(1, n_cols, figsize=(3+n_cols, 6), gridspec_kw={'wspace': 0.0})
+        if n_cols == 1:
+            axes = [axes]
+        for i, col in enumerate(data.columns):
+            ax = axes[i]
+            # Extract column data as a 2D array for imshow (n_rows x 1)
+            col_data = data[[col]]
+            # Set color normalization to the column's own min and max
+            vmin = col_data.min().min()
+            vmax = col_data.max().max()
+            norm = plt.Normalize(vmin, vmax)
+            im = ax.imshow(col_data.values, aspect="auto", cmap="plasma", vmin=vmin, vmax=vmax)
+            ax.set_xticks([0])
+            ax.set_xticklabels([data.columns[i]])
+        
+            # Only the first column gets the y-axis labels (configuration names)
+            if i == 0:
+                ax.set_yticks(np.arange(data.shape[0]))
+                ax.set_yticklabels([implementations[key] for key in data.index])
+            else:
+                ax.set_yticks([])
+            
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+        
+            # Annotate each cell and set text color based on background luminance.
+            for j in range(col_data.shape[0]):
+                cell_value = col_data.iloc[j, 0]
+                # Get the RGBA value for the current cell's background
+                rgba = im.cmap(norm(cell_value))
+                # Compute luminance using the Rec. 709 formula
+                luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
+                # Choose black text for light backgrounds and white for dark backgrounds
+                text_color = "black" if luminance > 0.5 else "white"
+                ax.text(0, j, f"{cell_value:.2f}", ha="center", va="center", 
+                        color=text_color, fontsize=10)
+            
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.suptitle(title)
+        plt.savefig(path, dpi=1200)
+        plt.close()
+    
+    # Plot the heatmaps
+    plot_heatmap(speedup, f"Speedup Heatmap | {optimization} | {precision_mode} | {threads}", os.path.join(output_file, f"speedup_precision_{optimization}_{precision_mode}_{threads}"))
+
+def plot_speedup_efficiency_heatmaps_optimization(
+    data: pd.DataFrame,
+    output_file: str,
+    implementations: list[str] | dict[str, str],
+    precision: str = "dp",
+    threads: int = 32,
+    precision_mode: str | None = None
+): 
+    """
+    Filter the dataframe by the given parameters and compute speedup and efficiency.
+    Then, plot heatmaps for both metrics with numeric annotations.
+    """
+
+    keys = list(implementations.keys()) if isinstance(implementations, dict) else implementations
+
+    # Filter data
+    df_filtered = data[
+        (data['implementation'].isin(keys)) &
+        (data['precision'] == precision) &
+        (data['threads'] == threads) & 
+        (data['precision_mode'].isna() if precision_mode is None
+         else data['precision_mode'] == precision_mode)
+    ]
+
+    # Pivot the table: rows = unique file (configuration), columns = threads, values = mean time
+    pivot_mean = df_filtered.pivot(index="implementation", columns="optimization", values="median")
+
+    pivot_mean = pivot_mean[['O0', 'O1', 'O2', 'O3']]
+    
+    # Compute speedup: use the time for 1 thread as the baseline (each row should have a thread==1 value)
+    speedup = pivot_mean.rdiv(pivot_mean["O0"], axis=0)
+    
+    def plot_heatmap(data, title, path):
+        n_cols = data.shape[1]
+
+        fig, axes = plt.subplots(1, n_cols, figsize=(3+n_cols, 6), gridspec_kw={'wspace': 0.0})
+        if n_cols == 1:
+            axes = [axes]
+        for i, col in enumerate(data.columns):
+            ax = axes[i]
+            # Extract column data as a 2D array for imshow (n_rows x 1)
+            col_data = data[[col]]
+            # Set color normalization to the column's own min and max
+            vmin = col_data.min().min()
+            vmax = col_data.max().max()
+            norm = plt.Normalize(vmin, vmax)
+            im = ax.imshow(col_data.values, aspect="auto", cmap="plasma", vmin=vmin, vmax=vmax)
+            ax.set_xticks([0])
+            ax.set_xticklabels([data.columns[i]])
+        
+        
+            # Only the first column gets the y-axis labels (configuration names)
+            if i == 0:
+                ax.set_yticks(np.arange(data.shape[0]))
+                ax.set_yticklabels([implementations[key] for key in data.index])
+            else:
+                ax.set_yticks([])
+            
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+        
+            # Annotate each cell and set text color based on background luminance.
+            for j in range(col_data.shape[0]):
+                cell_value = col_data.iloc[j, 0]
+                # Get the RGBA value for the current cell's background
+                rgba = im.cmap(norm(cell_value))
+                # Compute luminance using the Rec. 709 formula
+                luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
+                # Choose black text for light backgrounds and white for dark backgrounds
+                text_color = "black" if luminance > 0.5 else "white"
+                ax.text(0, j, f"{cell_value:.2f}", ha="center", va="center", 
+                        color=text_color, fontsize=10)
+            
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.suptitle(title)
+        plt.savefig(path, dpi=1200)
+        plt.close()
+    
+    # Plot the heatmaps
+    plot_heatmap(speedup, f"Speedup Heatmap | {precision} | {precision_mode} | {threads}", os.path.join(output_file, f"speedup_optimization_{precision}_{precision_mode}_{threads}"))
+
+def plot_speedup_efficiency_heatmaps_precision_mode(
+    data: pd.DataFrame,
+    output_file: str,
+    implementations: list[str] | dict[str, str],
+    precision: str = "dp",
+    threads: int = 32,
+    optimization: str = "O3",
+): 
+    """
+    Filter the dataframe by the given parameters and compute speedup and efficiency.
+    Then, plot heatmaps for both metrics with numeric annotations.
+    """
+
+    keys = list(implementations.keys()) if isinstance(implementations, dict) else implementations
+
+    # Filter data
+    df_filtered = data[
+        (data['implementation'].isin(keys)) &
+        (data['precision'] == precision) &
+        (data['optimization'] == optimization) &
+        (data['threads'] == threads)
+    ]
+
+    # Pivot the table: rows = unique file (configuration), columns = threads, values = mean time
+    pivot_mean = df_filtered.pivot(index="implementation", columns="precision_mode", values="median")
+
+    pivot_mean = pivot_mean[['STRICT', 'PRECISE', np.nan]]
+    pivot_mean = pivot_mean.rename(columns={np.nan : "Default"})
+
+    # Compute speedup: use the time for 1 thread as the baseline (each row should have a thread==1 value)
+    speedup = pivot_mean.rdiv(pivot_mean["STRICT"], axis=0)
+    
+    def plot_heatmap(data, title, path):
+        n_cols = data.shape[1]
+
+        fig, axes = plt.subplots(1, n_cols, figsize=(3+n_cols, 6), gridspec_kw={'wspace': 0.0})
+        if n_cols == 1:
+            axes = [axes]
+        for i, col in enumerate(data.columns):
+            ax = axes[i]
+            # Extract column data as a 2D array for imshow (n_rows x 1)
+            col_data = data[[col]]
+            # Set color normalization to the column's own min and max
+            vmin = col_data.min().min()
+            vmax = col_data.max().max()
+            norm = plt.Normalize(vmin, vmax)
+            im = ax.imshow(col_data.values, aspect="auto", cmap="plasma", vmin=vmin, vmax=vmax)
+            ax.set_xticks([0])
+            ax.set_xticklabels([data.columns[i]])
+        
+            # Remove x-axis ticks and set title as the column header
+        
+            # Only the first column gets the y-axis labels (configuration names)
+            if i == 0:
+                ax.set_yticks(np.arange(data.shape[0]))
+                ax.set_yticklabels([implementations[key] for key in data.index])
+            else:
+                ax.set_yticks([])
+            
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+        
+            # Annotate each cell with its value
+                    # Annotate each cell and set text color based on background luminance.
+            for j in range(col_data.shape[0]):
+                cell_value = col_data.iloc[j, 0]
+                # Get the RGBA value for the current cell's background
+                rgba = im.cmap(norm(cell_value))
+                # Compute luminance using the Rec. 709 formula
+                luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
+                # Choose black text for light backgrounds and white for dark backgrounds
+                text_color = "black" if luminance > 0.5 else "white"
+                ax.text(0, j, f"{cell_value:.2f}", ha="center", va="center", 
+                        color=text_color, fontsize=10)
+            
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.suptitle(title)
+        plt.savefig(path, dpi=1200)
+        plt.close()
+    
+    # Plot the heatmaps
+    plot_heatmap(speedup, f"Speedup Heatmap | {precision} | {optimization} | {threads}", os.path.join(output_file, f"speedup_precision_mode_{precision}_{optimization}_{threads}"))
+
 def plot_speedup_efficiency_heatmaps(
     data: pd.DataFrame,
     output_file: str,
@@ -234,7 +476,7 @@ def plot_speedup_efficiency_heatmaps(
             divider_scalar = 32
         efficiency[t] = efficiency[t] / divider_scalar
     
-    def plot_heatmap(data, title, path, original_table, ylabel="Configuration"):
+    def plot_heatmap(data, title, path, original_table):
         n_cols = data.shape[1]
 
         fig, axes = plt.subplots(1, n_cols, figsize=(3+n_cols, 6), gridspec_kw={'wspace': 0.0})
@@ -258,7 +500,6 @@ def plot_speedup_efficiency_heatmaps(
             if i == 0:
                 ax.set_yticks(np.arange(data.shape[0]))
                 ax.set_yticklabels([implementations[original_table[original_table["file"] == key].iloc[0]["implementation"]]  for key in data.index])
-                ax.set_ylabel(ylabel)
             else:
                 ax.set_yticks([])
             
@@ -372,6 +613,63 @@ if __name__ == "__main__":
         precision='dp',
         optimization='O3',
         precision_mode=None
+    )
+
+    plot_speedup_efficiency_heatmaps_precision(data,
+        args.output_dir,
+        implementations={
+            'baseline' : "Baseline",
+            'static_multithreading' : "Static Multithreading",
+            'dynamic_multithreading' : "Dynamic Multitreading",
+            'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
+            'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
+            'dynamic_multithreading': 'Dynamic multithreading',
+            'no_complex': 'Custom complex',
+            'no_complex_simd': 'Custom complex using SIMD',
+            'avx2': 'Manual avx2',
+            'avx2_optimized': 'Optimized manual avx2',
+        },
+        optimization="O3",
+        threads=4,
+        precision_mode=None
+    )
+
+    plot_speedup_efficiency_heatmaps_optimization(data,
+        args.output_dir,
+        implementations={
+            'baseline' : "Baseline",
+            'static_multithreading' : "Static Multithreading",
+            'dynamic_multithreading' : "Dynamic Multitreading",
+            'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
+            'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
+            'dynamic_multithreading': 'Dynamic multithreading',
+            'no_complex': 'Custom complex',
+            'no_complex_simd': 'Custom complex using SIMD',
+            'avx2': 'Manual avx2',
+            'avx2_optimized': 'Optimized manual avx2',
+        },
+        precision='sp',
+        threads=32,
+        precision_mode=None
+    )
+
+    plot_speedup_efficiency_heatmaps_precision_mode(data,
+        args.output_dir,
+        implementations={
+            'baseline' : "Baseline",
+            'static_multithreading' : "Static Multithreading",
+            'dynamic_multithreading' : "Dynamic Multitreading",
+            'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
+            'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
+            'dynamic_multithreading': 'Dynamic multithreading',
+            'no_complex': 'Custom complex',
+            'no_complex_simd': 'Custom complex using SIMD',
+            'avx2': 'Manual avx2',
+            'avx2_optimized': 'Optimized manual avx2',
+        },
+        precision='sp',
+        threads=1,
+        optimization="O0",
     )
 
     for optimization in ["O0", "O1", "O2", "O3"]:
