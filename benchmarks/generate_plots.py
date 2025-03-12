@@ -7,7 +7,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from matplotlib.ticker import ScalarFormatter
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.patches import Rectangle
 
 SHOW_PLOTS = False
 
@@ -206,43 +207,49 @@ def plot_speedup_efficiency_heatmaps_precision(
     speedup = pivot_mean.rdiv(pivot_mean["dp"], axis=0)
     
     def plot_heatmap(data, title, path):
-        n_cols = data.shape[1]
+        n_rows = data.shape[0]
+        colors = ["lightgray"] * 2
+        nodes = [0.0, 1.0]
+        cmap2 = LinearSegmentedColormap.from_list("mycmap", list(zip(nodes, colors)))
 
-        fig, axes = plt.subplots(1, n_cols, figsize=(3+n_cols, 6), gridspec_kw={'wspace': 0.0})
-        if n_cols == 1:
+        fig, axes = plt.subplots(n_rows, 1, figsize=(3+n_rows, 6), gridspec_kw={'hspace': 0.0})
+        if n_rows == 1:
             axes = [axes]
-        for i, col in enumerate(data.columns):
+        for i, (index, row) in enumerate(data.iterrows()):
             ax = axes[i]
-            # Extract column data as a 2D array for imshow (n_rows x 1)
-            col_data = data[[col]]
+
             # Set color normalization to the column's own min and max
-            vmin = col_data.min().min()
-            vmax = col_data.max().max()
+            vmin = row.min().min()
+            vmax = row.max().max()
             norm = plt.Normalize(vmin, vmax)
-            im = ax.imshow(col_data.values, aspect="auto", cmap="plasma", vmin=vmin, vmax=vmax)
-            ax.set_xticks([0])
-            ax.set_xticklabels([data.columns[i]])
-        
-            # Only the first column gets the y-axis labels (configuration names)
-            if i == 0:
-                ax.set_yticks(np.arange(data.shape[0]))
-                ax.set_yticklabels([implementations[key] for key in data.index])
+            im = ax.imshow([row.values], aspect="auto", cmap=cmap2, vmin=vmin, vmax=vmax)
+            if i == n_rows -1:
+                ax.set_xticks(np.arange(data.shape[1]))
+                ax.set_xticklabels(data.columns)
             else:
-                ax.set_yticks([])
+                ax.set_xticks([])
+        
+        
+            ax.set_yticks([0])
+            ax.set_yticklabels([implementations[index]])
             
             for spine in ax.spines.values():
                 spine.set_visible(False)
         
             # Annotate each cell and set text color based on background luminance.
-            for j in range(col_data.shape[0]):
-                cell_value = col_data.iloc[j, 0]
+            for j in range(data.shape[1]):
+                cell_value = row.values[j]
                 # Get the RGBA value for the current cell's background
                 rgba = im.cmap(norm(cell_value))
+                if cell_value == vmax:
+                    highlight_color = (0.0, 1.0, 0.0, 1.0)
+                    ax.add_patch(Rectangle((j-0.5, -0.5), 1, 1, fill=True, facecolor=highlight_color))
+                    rgba = highlight_color
                 # Compute luminance using the Rec. 709 formula
                 luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
                 # Choose black text for light backgrounds and white for dark backgrounds
                 text_color = "black" if luminance > 0.5 else "white"
-                ax.text(0, j, f"{cell_value:.2f}", ha="center", va="center", 
+                ax.text(j, 0, f"{cell_value:.2f}", ha="center", va="center", 
                         color=text_color, fontsize=10)
             
         plt.tight_layout(rect=[0, 0, 1, 0.95])
@@ -286,44 +293,49 @@ def plot_speedup_efficiency_heatmaps_optimization(
     speedup = pivot_mean.rdiv(pivot_mean["O0"], axis=0)
     
     def plot_heatmap(data, title, path):
-        n_cols = data.shape[1]
+        n_rows = data.shape[0]
+        colors = ["lightgray"] * 2
+        nodes = [0.0, 1.0]
+        cmap2 = LinearSegmentedColormap.from_list("mycmap", list(zip(nodes, colors)))
 
-        fig, axes = plt.subplots(1, n_cols, figsize=(3+n_cols, 6), gridspec_kw={'wspace': 0.0})
-        if n_cols == 1:
+        fig, axes = plt.subplots(n_rows, 1, figsize=(3+n_rows, 6), gridspec_kw={'hspace': 0.0})
+        if n_rows == 1:
             axes = [axes]
-        for i, col in enumerate(data.columns):
+        for i, (index, row) in enumerate(data.iterrows()):
             ax = axes[i]
-            # Extract column data as a 2D array for imshow (n_rows x 1)
-            col_data = data[[col]]
+
             # Set color normalization to the column's own min and max
-            vmin = col_data.min().min()
-            vmax = col_data.max().max()
+            vmin = row.min().min()
+            vmax = row.max().max()
             norm = plt.Normalize(vmin, vmax)
-            im = ax.imshow(col_data.values, aspect="auto", cmap="plasma", vmin=vmin, vmax=vmax)
-            ax.set_xticks([0])
-            ax.set_xticklabels([data.columns[i]])
-        
-        
-            # Only the first column gets the y-axis labels (configuration names)
-            if i == 0:
-                ax.set_yticks(np.arange(data.shape[0]))
-                ax.set_yticklabels([implementations[key] for key in data.index])
+            im = ax.imshow([row.values], aspect="auto", cmap=cmap2, vmin=vmin, vmax=vmax)
+            if i == n_rows -1:
+                ax.set_xticks(np.arange(data.shape[1]))
+                ax.set_xticklabels(data.columns)
             else:
-                ax.set_yticks([])
+                ax.set_xticks([])
+        
+        
+            ax.set_yticks([0])
+            ax.set_yticklabels([implementations[index]])
             
             for spine in ax.spines.values():
                 spine.set_visible(False)
         
             # Annotate each cell and set text color based on background luminance.
-            for j in range(col_data.shape[0]):
-                cell_value = col_data.iloc[j, 0]
+            for j in range(data.shape[1]):
+                cell_value = row.values[j]
                 # Get the RGBA value for the current cell's background
                 rgba = im.cmap(norm(cell_value))
+                if cell_value == vmax:
+                    highlight_color = (0.0, 1.0, 0.0, 1.0)
+                    ax.add_patch(Rectangle((j-0.5, -0.5), 1, 1, fill=True, facecolor=highlight_color))
+                    rgba = highlight_color
                 # Compute luminance using the Rec. 709 formula
                 luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
                 # Choose black text for light backgrounds and white for dark backgrounds
                 text_color = "black" if luminance > 0.5 else "white"
-                ax.text(0, j, f"{cell_value:.2f}", ha="center", va="center", 
+                ax.text(j, 0, f"{cell_value:.2f}", ha="center", va="center", 
                         color=text_color, fontsize=10)
             
         plt.tight_layout(rect=[0, 0, 1, 0.95])
@@ -367,53 +379,55 @@ def plot_speedup_efficiency_heatmaps_precision_mode(
     speedup = pivot_mean.rdiv(pivot_mean["STRICT"], axis=0)
     
     def plot_heatmap(data, title, path):
-        n_cols = data.shape[1]
+        n_rows = data.shape[0]
+        colors = ["lightgray"] * 2
+        nodes = [0.0, 1.0]
+        cmap2 = LinearSegmentedColormap.from_list("mycmap", list(zip(nodes, colors)))
 
-        fig, axes = plt.subplots(1, n_cols, figsize=(3+n_cols, 6), gridspec_kw={'wspace': 0.0})
-        if n_cols == 1:
+        fig, axes = plt.subplots(n_rows, 1, figsize=(3+n_rows, 6), gridspec_kw={'hspace': 0.0})
+        if n_rows == 1:
             axes = [axes]
-        for i, col in enumerate(data.columns):
+        for i, (index, row) in enumerate(data.iterrows()):
             ax = axes[i]
-            # Extract column data as a 2D array for imshow (n_rows x 1)
-            col_data = data[[col]]
+
             # Set color normalization to the column's own min and max
-            vmin = col_data.min().min()
-            vmax = col_data.max().max()
+            vmin = row.min().min()
+            vmax = row.max().max()
             norm = plt.Normalize(vmin, vmax)
-            im = ax.imshow(col_data.values, aspect="auto", cmap="plasma", vmin=vmin, vmax=vmax)
-            ax.set_xticks([0])
-            ax.set_xticklabels([data.columns[i]])
-        
-            # Remove x-axis ticks and set title as the column header
-        
-            # Only the first column gets the y-axis labels (configuration names)
-            if i == 0:
-                ax.set_yticks(np.arange(data.shape[0]))
-                ax.set_yticklabels([implementations[key] for key in data.index])
+            im = ax.imshow([row.values], aspect="auto", cmap=cmap2, vmin=vmin, vmax=vmax)
+            if i == n_rows -1:
+                ax.set_xticks(np.arange(data.shape[1]))
+                ax.set_xticklabels(data.columns)
             else:
-                ax.set_yticks([])
+                ax.set_xticks([])
+        
+        
+            ax.set_yticks([0])
+            ax.set_yticklabels([implementations[index]])
             
             for spine in ax.spines.values():
                 spine.set_visible(False)
         
-            # Annotate each cell with its value
-                    # Annotate each cell and set text color based on background luminance.
-            for j in range(col_data.shape[0]):
-                cell_value = col_data.iloc[j, 0]
+            # Annotate each cell and set text color based on background luminance.
+            for j in range(data.shape[1]):
+                cell_value = row.values[j]
                 # Get the RGBA value for the current cell's background
                 rgba = im.cmap(norm(cell_value))
+                if cell_value == vmax:
+                    highlight_color = (0.0, 1.0, 0.0, 1.0)
+                    ax.add_patch(Rectangle((j-0.5, -0.5), 1, 1, fill=True, facecolor=highlight_color))
+                    rgba = highlight_color
                 # Compute luminance using the Rec. 709 formula
                 luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
                 # Choose black text for light backgrounds and white for dark backgrounds
                 text_color = "black" if luminance > 0.5 else "white"
-                ax.text(0, j, f"{cell_value:.2f}", ha="center", va="center", 
+                ax.text(j, 0, f"{cell_value:.2f}", ha="center", va="center", 
                         color=text_color, fontsize=10)
             
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.suptitle(title)
         plt.savefig(path, dpi=1200)
         plt.close()
-    
     # Plot the heatmaps
     plot_heatmap(speedup, f"Speedup Heatmap | {precision} | {optimization} | {threads}", os.path.join(output_file, f"speedup_precision_mode_{precision}_{optimization}_{threads}"))
 
