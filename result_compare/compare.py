@@ -40,7 +40,7 @@ baseline_difference_sum = np.sum(baseline_difference)
 baseline_difference_average = np.mean(baseline_difference)
 print(f"Difference baseline_dp baseline_sp: {baseline_difference_sum} {baseline_difference_average}")
 
-for i, hash_group in enumerate(sorted(file_hashes.items(), key=lambda x: len(x[1]))):
+for i, hash_group in enumerate(sorted(file_hashes.items(), key=lambda x: len(x[1]), reverse=True)):
     _hash, group = hash_group
     # Construct the full path of the current result file
     file_path = os.path.join(results_folder, group[0])
@@ -49,7 +49,7 @@ for i, hash_group in enumerate(sorted(file_hashes.items(), key=lambda x: len(x[1
     result_matrix = read_result(file_path)
 
     baseline_matrix = baseline_dp
-    if  "_sp_" in group[0]:
+    if  "_sp" in group[0]:
         baseline_matrix = baseline_sp
         sp_groups += 1
     else:

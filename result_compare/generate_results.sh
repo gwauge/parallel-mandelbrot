@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for file in ../build/bin/*; do
+for file in ../build/bin/*/*; do
     # extract filename from path
     filename=$(basename $file)
 
