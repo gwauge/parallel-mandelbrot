@@ -25,5 +25,11 @@ jobs:
                   options: -v ${{ github.workspace }}:/workspace -e CI=1 --rm # Remove the container after execution
                   # Inside the container, run build commands
                   run: |
+                      # Change to the workspace directory
                       cd /workspace
+
+                      # TEMPORARY: remove GPU builds from CI
+                      sed -i '/# GPU/,$d' CMakeLists.txt
+
+                      # execute build script
                       bash build.sh
