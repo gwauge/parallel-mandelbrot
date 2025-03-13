@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def main(input_file: str, output_file: str | None):
+def main(input_file: str, output_file: str | None, dpi: int = 2400) -> None:
     image = np.log(np.loadtxt(input_file, delimiter=",", dtype=np.uint16))
 
     plt.gca().set_axis_off()
@@ -16,7 +16,7 @@ def main(input_file: str, output_file: str | None):
     plt.imshow(image, interpolation="none", cmap="BuGn", aspect="auto")
 
     if output_file:
-        plt.savefig(output_file, dpi=2400, bbox_inches=0, pad_inches = 0)
+        plt.savefig(output_file, dpi=dpi, bbox_inches=0, pad_inches=0)
     else:
         plt.show()
 
@@ -33,6 +33,8 @@ if __name__ == "__main__":
     # Optional output file, disabled by default
     parser.add_argument("-o", "--output", help="Output file", type=str)
 
+    parser.add_argument("--dpi", help="DPI", type=int, default=2400)
+
     args = parser.parse_args()
 
-    main(args.input, args.output)
+    main(args.input, args.output, args.dpi)

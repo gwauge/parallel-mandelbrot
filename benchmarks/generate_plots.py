@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import os
+import shutil
 import argparse
 import re
+import logging
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,6 +13,14 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.patches import Rectangle
 
 SHOW_PLOTS = False
+
+DPI = 1200
+
+logging.basicConfig(
+    # level=logging.INFO,
+    format='[%(levelname)s - %(asctime)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 
 # Read performance metrics from CSV
@@ -125,8 +135,9 @@ def boxplots(data, output_file):
             for num_thread in num_threads:
                 filtered_data.append(data[(data["algo"] == algo) & (data["options"] == option) & (data["threads"] == num_thread)]["median"])
             ax.boxplot(filtered_data)
-            ax.set_xticks([y + 1 for y in range(len(filtered_data))],
-                  labels=num_threads)
+            ax.set_xticks(
+                [y + 1 for y in range(len(filtered_data))],
+                labels=num_threads)
             ax.set_ylim(bottom=0, top=maximum)
             ax.set_xlabel('Number of threads')
             ax.set_ylabel('Time in ms')
@@ -134,6 +145,10 @@ def boxplots(data, output_file):
 
         plt.savefig(os.path.join(output_file, f"{algo}.png"), dpi=1200)
         plt.close(fig)
+
+
+def precision_mode_str(precision_mode):
+    return "N/A" if not precision_mode else precision_mode
 
 
 def scatter_implementation_with_fixed_params(
@@ -147,6 +162,7 @@ def scatter_implementation_with_fixed_params(
     fig, ax = plt.subplots(1, 1)  # use figsize=(15, 15)) for square plot
 
     keys = list(implementations.keys()) if isinstance(implementations, dict) else implementations
+    logging.info(f"Creating plot '{output_file}' with keys: {', '.join(keys)}")
 
     # Filter data
     filtered_df = data[
@@ -162,10 +178,14 @@ def scatter_implementation_with_fixed_params(
         subset = filtered_df[filtered_df['implementation'] == implementation]
         label = implementations[implementation] if isinstance(implementations, dict) else implementation
         zorder = 5 + 1/subset["std"].max()
-        ax.errorbar(subset['threads'], subset['median'], yerr=subset["std"], zorder=zorder, capsize=3, linestyle="", marker="_", label=label)
+        ax.errorbar(
+            subset['threads'], subset['median'],
+            yerr=subset["std"], zorder=zorder,
+            capsize=3, linestyle="",
+            marker="_", label=label)
 
-
-    ax.set_title(f"Precision: {precision} | Optimization: {optimization} | Precision Mode: {'N/A' if not precision_mode else precision_mode}")
+    ax.set_title(
+        f"Precision: {precision} | Optimization: {optimization} | Precision Mode: {precision_mode_str(precision_mode)}")
     ax.set_xlabel('Threads')
     ax.set_xscale("log", base=2)
     ax.grid(axis="y", alpha=0.4)
@@ -173,8 +193,11 @@ def scatter_implementation_with_fixed_params(
     ax.set_ylabel('Time in ms')
     ax.legend()
 
-    plt.savefig(output_file, dpi=1200)
+    plt.savefig(output_file, dpi=DPI)
     plt.close(fig)
+
+    logging.info(f'Created plot \'{output_file}\'')
+
 
 def plot_speedup_efficiency_heatmaps_precision(
     data: pd.DataFrame,
@@ -183,7 +206,7 @@ def plot_speedup_efficiency_heatmaps_precision(
     optimization: str = "O3",
     threads: int = 32,
     precision_mode: str | None = None
-): 
+):
     """
     Filter the dataframe by the given parameters and compute speedup and efficiency.
     Then, plot heatmaps for both metrics with numeric annotations.
@@ -195,7 +218,7 @@ def plot_speedup_efficiency_heatmaps_precision(
     df_filtered = data[
         (data['implementation'].isin(keys)) &
         (data['optimization'] == optimization) &
-        (data['threads'] == threads) & 
+        (data['threads'] == threads) &
         (data['precision_mode'].isna() if precision_mode is None
          else data['precision_mode'] == precision_mode)
     ]
@@ -205,7 +228,7 @@ def plot_speedup_efficiency_heatmaps_precision(
     pivot_mean = pivot_mean[["dp", "sp"]]
 
     speedup = pivot_mean.rdiv(pivot_mean["dp"], axis=0)
-    
+
     def plot_heatmap(data, title, path):
         n_rows = data.shape[0]
         colors = ["lightgray"] * 2
@@ -223,19 +246,18 @@ def plot_speedup_efficiency_heatmaps_precision(
             vmax = row.max().max()
             norm = plt.Normalize(vmin, vmax)
             im = ax.imshow([row.values], aspect="auto", cmap=cmap2, vmin=vmin, vmax=vmax)
-            if i == n_rows -1:
+            if i == n_rows-1:
                 ax.set_xticks(np.arange(data.shape[1]))
                 ax.set_xticklabels(data.columns)
             else:
                 ax.set_xticks([])
-        
-        
+
             ax.set_yticks([0])
             ax.set_yticklabels([implementations[index]])
-            
+
             for spine in ax.spines.values():
                 spine.set_visible(False)
-        
+
             # Annotate each cell and set text color based on background luminance.
             for j in range(data.shape[1]):
                 cell_value = row.values[j]
@@ -249,16 +271,20 @@ def plot_speedup_efficiency_heatmaps_precision(
                 luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
                 # Choose black text for light backgrounds and white for dark backgrounds
                 text_color = "black" if luminance > 0.5 else "white"
-                ax.text(j, 0, f"{cell_value:.2f}", ha="center", va="center", 
+                ax.text(j, 0, f"{cell_value:.2f}", ha="center", va="center",
                         color=text_color, fontsize=10)
-            
+
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.suptitle(title)
-        plt.savefig(path, dpi=1200)
+        plt.savefig(path, dpi=DPI)
         plt.close()
-    
+
     # Plot the heatmaps
-    plot_heatmap(speedup, f"Speedup Heatmap | {optimization} | {precision_mode} | {threads}", os.path.join(output_file, f"speedup_precision_{optimization}_{precision_mode}_{threads}"))
+    plot_heatmap(
+        speedup,
+        f"Speedup Heatmap | {optimization} | {precision_mode_str(precision_mode)} | {threads}",
+        os.path.join(output_file, f"speedup_precision_{optimization}_{precision_mode}_{threads}"))
+
 
 def plot_speedup_efficiency_heatmaps_optimization(
     data: pd.DataFrame,
@@ -267,7 +293,7 @@ def plot_speedup_efficiency_heatmaps_optimization(
     precision: str = "dp",
     threads: int = 32,
     precision_mode: str | None = None
-): 
+):
     """
     Filter the dataframe by the given parameters and compute speedup and efficiency.
     Then, plot heatmaps for both metrics with numeric annotations.
@@ -279,7 +305,7 @@ def plot_speedup_efficiency_heatmaps_optimization(
     df_filtered = data[
         (data['implementation'].isin(keys)) &
         (data['precision'] == precision) &
-        (data['threads'] == threads) & 
+        (data['threads'] == threads) &
         (data['precision_mode'].isna() if precision_mode is None
          else data['precision_mode'] == precision_mode)
     ]
@@ -288,10 +314,10 @@ def plot_speedup_efficiency_heatmaps_optimization(
     pivot_mean = df_filtered.pivot(index="implementation", columns="optimization", values="median")
 
     pivot_mean = pivot_mean[['O0', 'O1', 'O2', 'O3']]
-    
+
     # Compute speedup: use the time for 1 thread as the baseline (each row should have a thread==1 value)
     speedup = pivot_mean.rdiv(pivot_mean["O0"], axis=0)
-    
+
     def plot_heatmap(data, title, path):
         n_rows = data.shape[0]
         colors = ["lightgray"] * 2
@@ -309,19 +335,18 @@ def plot_speedup_efficiency_heatmaps_optimization(
             vmax = row.max().max()
             norm = plt.Normalize(vmin, vmax)
             im = ax.imshow([row.values], aspect="auto", cmap=cmap2, vmin=vmin, vmax=vmax)
-            if i == n_rows -1:
+            if i == n_rows-1:
                 ax.set_xticks(np.arange(data.shape[1]))
                 ax.set_xticklabels(data.columns)
             else:
                 ax.set_xticks([])
-        
-        
+
             ax.set_yticks([0])
             ax.set_yticklabels([implementations[index]])
-            
+
             for spine in ax.spines.values():
                 spine.set_visible(False)
-        
+
             # Annotate each cell and set text color based on background luminance.
             for j in range(data.shape[1]):
                 cell_value = row.values[j]
@@ -335,16 +360,20 @@ def plot_speedup_efficiency_heatmaps_optimization(
                 luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
                 # Choose black text for light backgrounds and white for dark backgrounds
                 text_color = "black" if luminance > 0.5 else "white"
-                ax.text(j, 0, f"{cell_value:.2f}", ha="center", va="center", 
+                ax.text(j, 0, f"{cell_value:.2f}", ha="center", va="center",
                         color=text_color, fontsize=10)
-            
+
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.suptitle(title)
-        plt.savefig(path, dpi=1200)
+        plt.savefig(path, dpi=DPI)
         plt.close()
-    
+
     # Plot the heatmaps
-    plot_heatmap(speedup, f"Speedup Heatmap | {precision} | {precision_mode} | {threads}", os.path.join(output_file, f"speedup_optimization_{precision}_{precision_mode}_{threads}"))
+    plot_heatmap(
+        speedup,
+        f"Speedup Heatmap | {precision} | {precision_mode_str(precision_mode)} | {threads}",
+        os.path.join(output_file, f"speedup_optimization_{precision}_{precision_mode}_{threads}"))
+
 
 def plot_speedup_efficiency_heatmaps_precision_mode(
     data: pd.DataFrame,
@@ -353,7 +382,7 @@ def plot_speedup_efficiency_heatmaps_precision_mode(
     precision: str = "dp",
     threads: int = 32,
     optimization: str = "O3",
-): 
+):
     """
     Filter the dataframe by the given parameters and compute speedup and efficiency.
     Then, plot heatmaps for both metrics with numeric annotations.
@@ -373,11 +402,11 @@ def plot_speedup_efficiency_heatmaps_precision_mode(
     pivot_mean = df_filtered.pivot(index="implementation", columns="precision_mode", values="median")
 
     pivot_mean = pivot_mean[['STRICT', 'PRECISE', np.nan]]
-    pivot_mean = pivot_mean.rename(columns={np.nan : "Default"})
+    pivot_mean = pivot_mean.rename(columns={np.nan: "Default"})
 
     # Compute speedup: use the time for 1 thread as the baseline (each row should have a thread==1 value)
     speedup = pivot_mean.rdiv(pivot_mean["STRICT"], axis=0)
-    
+
     def plot_heatmap(data, title, path):
         n_rows = data.shape[0]
         colors = ["lightgray"] * 2
@@ -395,19 +424,18 @@ def plot_speedup_efficiency_heatmaps_precision_mode(
             vmax = row.max().max()
             norm = plt.Normalize(vmin, vmax)
             im = ax.imshow([row.values], aspect="auto", cmap=cmap2, vmin=vmin, vmax=vmax)
-            if i == n_rows -1:
+            if i == n_rows-1:
                 ax.set_xticks(np.arange(data.shape[1]))
                 ax.set_xticklabels(data.columns)
             else:
                 ax.set_xticks([])
-        
-        
+
             ax.set_yticks([0])
             ax.set_yticklabels([implementations[index]])
-            
+
             for spine in ax.spines.values():
                 spine.set_visible(False)
-        
+
             # Annotate each cell and set text color based on background luminance.
             for j in range(data.shape[1]):
                 cell_value = row.values[j]
@@ -421,15 +449,20 @@ def plot_speedup_efficiency_heatmaps_precision_mode(
                 luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
                 # Choose black text for light backgrounds and white for dark backgrounds
                 text_color = "black" if luminance > 0.5 else "white"
-                ax.text(j, 0, f"{cell_value:.2f}", ha="center", va="center", 
+                ax.text(j, 0, f"{cell_value:.2f}", ha="center", va="center",
                         color=text_color, fontsize=10)
-            
+
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.suptitle(title)
-        plt.savefig(path, dpi=1200)
+        plt.savefig(path, dpi=DPI)
         plt.close()
+
     # Plot the heatmaps
-    plot_heatmap(speedup, f"Speedup Heatmap | {precision} | {optimization} | {threads}", os.path.join(output_file, f"speedup_precision_mode_{precision}_{optimization}_{threads}"))
+    plot_heatmap(
+        speedup,
+        f"Speedup Heatmap | {precision} | {optimization} | {threads}",
+        os.path.join(output_file, f"speedup_precision_mode_{precision}_{optimization}_{threads}"))
+
 
 def plot_speedup_efficiency_heatmaps(
     data: pd.DataFrame,
@@ -438,7 +471,7 @@ def plot_speedup_efficiency_heatmaps(
     precision: str = "dp",
     optimization: str = "O3",
     precision_mode: str | None = None
-): 
+):
     """
     Filter the dataframe by the given parameters and compute speedup and efficiency.
     Then, plot heatmaps for both metrics with numeric annotations.
@@ -462,13 +495,12 @@ def plot_speedup_efficiency_heatmaps(
         (data['precision_mode'].isna() if precision_mode is None
          else data['precision_mode'] == precision_mode)
     ]
-    
+
     # Pivot the table: rows = unique file (configuration), columns = threads, values = mean time
     pivot_mean = df_filtered.pivot(index="file", columns="threads", values="median")
 
     pivot_baseline = baseline.pivot(index="file", columns="threads", values="median")
 
-    
     # Make sure the pivot is sorted by threads
     pivot_mean = pivot_mean.sort_index(axis=1)
 
@@ -478,10 +510,10 @@ def plot_speedup_efficiency_heatmaps(
     divider.index = pivot_mean.index
 
     pivot_mean["total"] = pivot_mean[32]
-    
+
     # Compute speedup: use the time for 1 thread as the baseline (each row should have a thread==1 value)
     speedup = pivot_mean.rdiv(divider)
-    
+
     # Compute efficiency: speedup divided by the number of threads
     efficiency = speedup.copy()
     for t in efficiency.columns:
@@ -489,7 +521,7 @@ def plot_speedup_efficiency_heatmaps(
         if t == "total":
             divider_scalar = 32
         efficiency[t] = efficiency[t] / divider_scalar
-    
+
     def plot_heatmap(data, title, path, original_table):
         n_cols = data.shape[1]
 
@@ -507,21 +539,23 @@ def plot_speedup_efficiency_heatmaps(
             im = ax.imshow(col_data.values, aspect="auto", cmap="plasma", vmin=vmin, vmax=vmax)
             ax.set_xticks([0])
             ax.set_xticklabels([data.columns[i]])
-        
+
             # Remove x-axis ticks and set title as the column header
-        
+
             # Only the first column gets the y-axis labels (configuration names)
             if i == 0:
                 ax.set_yticks(np.arange(data.shape[0]))
-                ax.set_yticklabels([implementations[original_table[original_table["file"] == key].iloc[0]["implementation"]]  for key in data.index])
+                ax.set_yticklabels(
+                    [implementations[original_table[original_table["file"] == key].iloc[0]["implementation"]]
+                     for key in data.index])
             else:
                 ax.set_yticks([])
-            
+
             for spine in ax.spines.values():
                 spine.set_visible(False)
-        
+
             # Annotate each cell with its value
-                    # Annotate each cell and set text color based on background luminance.
+            # Annotate each cell and set text color based on background luminance.
             for j in range(col_data.shape[0]):
                 cell_value = col_data.iloc[j, 0]
                 # Get the RGBA value for the current cell's background
@@ -530,17 +564,24 @@ def plot_speedup_efficiency_heatmaps(
                 luminance = 0.2126 * rgba[0] + 0.7152 * rgba[1] + 0.0722 * rgba[2]
                 # Choose black text for light backgrounds and white for dark backgrounds
                 text_color = "black" if luminance > 0.5 else "white"
-                ax.text(0, j, f"{cell_value:.2f}", ha="center", va="center", 
+                ax.text(0, j, f"{cell_value:.2f}", ha="center", va="center",
                         color=text_color, fontsize=10)
-            
+
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.suptitle(title)
-        plt.savefig(path, dpi=1200)
+        plt.savefig(path, dpi=DPI)
         plt.close()
-    
+
     # Plot the heatmaps
-    plot_heatmap(speedup, f"Speedup Heatmap | {precision} | {optimization} | {precision_mode}", os.path.join(output_file, f"speedup_{precision}_{optimization}_{precision_mode}"), data)
-    plot_heatmap(efficiency, f"Efficiency Heatmap | {precision} | {optimization} | {precision_mode}", os.path.join(output_file, f"efficiency_{precision}_{optimization}_{precision_mode}"), data)
+    plot_heatmap(
+        speedup,
+        f"Speedup Heatmap | {precision} | {optimization} | {precision_mode_str(precision_mode)}",
+        os.path.join(output_file, f"speedup_{precision}_{optimization}_{precision_mode}"), data)
+    plot_heatmap(
+        efficiency,
+        f"Efficiency Heatmap | {precision} | {optimization} | {precision_mode_str(precision_mode)}",
+        os.path.join(output_file, f"efficiency_{precision}_{optimization}_{precision_mode}"), data)
+
 
 if __name__ == "__main__":
 
@@ -559,7 +600,38 @@ if __name__ == "__main__":
         type=str,
         default="plots")
 
+    # clean output directory
+    parser.add_argument(
+        "-c", "--clean",
+        action="store_true",
+        default=False,
+        help="Clean the output directory before creating new plots")
+
+    parser.add_argument(
+        "--dpi",
+        type=int,
+        default=DPI,
+        help="DPI of the output plots")
+
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        default=False,
+        help="Enable verbose logging"
+    )
+
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(level=logging.INFO)
+
+    if args.clean:
+        logging.warning(f"Flag --clean was passed. Cleaning output directory '{args.output_dir}'")
+        if os.path.exists(args.output_dir):
+            shutil.rmtree(args.output_dir)
+
+    if args.dpi:
+        DPI = args.dpi
 
     data = read_metrics(args.filename)
 
@@ -582,7 +654,6 @@ if __name__ == "__main__":
         data,
         os.path.join(args.output_dir, "boxplot"))
     """
-
 
     # Plot baseline, static, dynamic
     scatter_implementation_with_fixed_params(
@@ -616,28 +687,28 @@ if __name__ == "__main__":
         data,
         os.path.join(args.output_dir, "simd"),
         implementations={
-            'avx2': 'Manual avx2',
+            # 'avx2': 'Manual avx2',
             'avx2_optimized': 'Optimized manual avx2',
-            'no_complex': 'Custom complex',
+            # 'no_complex': 'Custom complex',
             'no_complex_simd': 'Custom complex using SIMD',
-            'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
+            # 'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
             'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
-            'dynamic_multithreading': 'Dynamic multithreading'
+            # 'dynamic_multithreading': 'Dynamic multithreading'
         },
         precision='dp',
         optimization='O3',
         precision_mode=None
     )
 
-    plot_speedup_efficiency_heatmaps_precision(data,
+    plot_speedup_efficiency_heatmaps_precision(
+        data,
         args.output_dir,
         implementations={
-            'baseline' : "Baseline",
-            'static_multithreading' : "Static Multithreading",
-            'dynamic_multithreading' : "Dynamic Multitreading",
+            'baseline': "Baseline",
+            'static_multithreading': "Static Multithreading",
+            'dynamic_multithreading': "Dynamic Multitreading",
             'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
             'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
-            'dynamic_multithreading': 'Dynamic multithreading',
             'no_complex': 'Custom complex',
             'no_complex_simd': 'Custom complex using SIMD',
             'avx2': 'Manual avx2',
@@ -648,15 +719,15 @@ if __name__ == "__main__":
         precision_mode=None
     )
 
-    plot_speedup_efficiency_heatmaps_optimization(data,
+    plot_speedup_efficiency_heatmaps_optimization(
+        data,
         args.output_dir,
         implementations={
-            'baseline' : "Baseline",
-            'static_multithreading' : "Static Multithreading",
-            'dynamic_multithreading' : "Dynamic Multitreading",
+            'baseline': "Baseline",
+            'static_multithreading': "Static Multithreading",
+            'dynamic_multithreading': "Dynamic Multitreading",
             'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
             'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
-            'dynamic_multithreading': 'Dynamic multithreading',
             'no_complex': 'Custom complex',
             'no_complex_simd': 'Custom complex using SIMD',
             'avx2': 'Manual avx2',
@@ -667,15 +738,15 @@ if __name__ == "__main__":
         precision_mode=None
     )
 
-    plot_speedup_efficiency_heatmaps_precision_mode(data,
+    plot_speedup_efficiency_heatmaps_precision_mode(
+        data,
         args.output_dir,
         implementations={
-            'baseline' : "Baseline",
-            'static_multithreading' : "Static Multithreading",
-            'dynamic_multithreading' : "Dynamic Multitreading",
+            'baseline': "Baseline",
+            'static_multithreading': "Static Multithreading",
+            'dynamic_multithreading': "Dynamic Multitreading",
             'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
             'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
-            'dynamic_multithreading': 'Dynamic multithreading',
             'no_complex': 'Custom complex',
             'no_complex_simd': 'Custom complex using SIMD',
             'avx2': 'Manual avx2',
@@ -687,15 +758,15 @@ if __name__ == "__main__":
     )
 
     for optimization in ["O0", "O1", "O2", "O3"]:
-        plot_speedup_efficiency_heatmaps(data,
+        plot_speedup_efficiency_heatmaps(
+            data,
             args.output_dir,
             implementations={
-                'baseline' : "Baseline",
-                'static_multithreading' : "Static Multithreading",
-                'dynamic_multithreading' : "Dynamic Multitreading",
+                'baseline': "Baseline",
+                'static_multithreading': "Static Multithreading",
+                'dynamic_multithreading': "Dynamic Multitreading",
                 'dynamic_multithreading_simd': 'Dynamic multithreading using SIMD',
                 'dynamic_multithreading_simd_optimized': 'Dynamic multithreading using SIMD Optimized',
-                'dynamic_multithreading': 'Dynamic multithreading',
                 'no_complex': 'Custom complex',
                 'no_complex_simd': 'Custom complex using SIMD',
                 'avx2': 'Manual avx2',
